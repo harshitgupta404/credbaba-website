@@ -15,6 +15,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-3);
   height: 72px;
 }
 .brand {
@@ -25,6 +26,11 @@
   font-weight: 700;
   font-size: var(--text-xl);
   color: var(--color-ink);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .brand { font-size: var(--text-lg); }
 }
 .brand-mark {
   width: 34px; height: 34px;
@@ -85,6 +91,14 @@
   background: var(--color-surface);
   align-items: center; justify-content: center;
   color: var(--color-ink);
+}
+
+/* On small screens the header CTA competes with the brand name for
+   space. The hero already repeats this CTA prominently below, so we
+   hide the header's copy of it on mobile and keep only the essential
+   controls (theme toggle, menu). */
+@media (max-width: 640px) {
+  .header-cta { display: none; }
 }
 
 @media (max-width: 860px) {
