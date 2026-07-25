@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply for a Loan — CredBaba</title>
+<meta name="description" content="Apply for a Home, Personal, or Business loan with CredBaba. Simple, secure, no login required.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/forms.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <span class="brand-mark">CB</span>
+      CredBaba
+    </a>
+    <nav class="nav-desktop">
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="apply.html" class="active">Get a Loan</a>
+        <a href="agent.html">Become an Agent</a>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.html">Home</a>
+    <a href="apply.html">Get a Loan</a>
+    <a href="agent.html">Become an Agent</a>
+  </div>
+</header>
+
+<main>
+  <div class="form-page-header container">
+    <div class="eyebrow">Loan Application</div>
+    <h1>Let's get your loan started.</h1>
+    <p>Fill in your details below. It takes about 2 minutes, and everything is checked instantly so you know it's gone through correctly.</p>
+  </div>
+
+  <div class="form-wrap container">
+    <div class="form-banner" id="formBanner" role="status"></div>
+
+    <div class="form-card" id="formCard">
+      <form id="loanForm" novalidate>
+
+        <div class="form-section-title">Personal details</div>
+
+        <div class="form-row">
+          <div class="field" id="f-firstName">
+            <label for="firstName">First name <span class="req">*</span></label>
+            <input type="text" id="firstName" name="firstName" autocomplete="given-name" placeholder="Ravi">
+            <div class="field-hint">Letters only.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-lastName">
+            <label for="lastName">Last name <span class="req">*</span></label>
+            <input type="text" id="lastName" name="lastName" autocomplete="family-name" placeholder="Kumar">
+            <div class="field-hint">Letters only.</div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="field" id="f-fatherName">
+          <label for="fatherName">Father's name <span class="req">*</span></label>
+          <input type="text" id="fatherName" name="fatherName" placeholder="Suresh Kumar">
+          <div class="field-hint">Letters only.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="field" id="f-dob">
+            <label for="dob">Date of birth <span class="req">*</span></label>
+            <input type="date" id="dob" name="dob">
+            <div class="field-hint">You must be 18 or older.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-gender">
+            <label>Gender <span class="req">*</span></label>
+            <div class="radio-group" role="radiogroup" aria-label="Gender">
+              <div class="radio-pill">
+                <input type="radio" id="genderMale" name="gender" value="Male">
+                <label for="genderMale">Male</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="genderFemale" name="gender" value="Female">
+                <label for="genderFemale">Female</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="genderOther" name="gender" value="Other">
+                <label for="genderOther">Other</label>
+              </div>
+            </div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="form-section-title">Contact details</div>
+
+        <div class="form-row">
+          <div class="field" id="f-mobile">
+            <label for="mobile">Mobile number (PAN linked) <span class="req">*</span></label>
+            <input type="tel" id="mobile" name="mobile" inputmode="numeric" maxlength="10" placeholder="98XXXXXXXX" class="mono-input">
+            <div class="field-hint">10 digits, starting with 6, 7, 8, or 9.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-altMobile">
+            <label for="altMobile">Alternate number <span class="optional">(optional)</span></label>
+            <input type="tel" id="altMobile" name="altMobile" inputmode="numeric" maxlength="10" placeholder="98XXXXXXXX" class="mono-input">
+            <div class="field-hint">10 digits, starting with 6, 7, 8, or 9.</div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="form-section-title">Identity details</div>
+
+        <div class="field" id="f-pan">
+          <label for="pan">PAN number <span class="req">*</span></label>
+          <input type="text" id="pan" name="pan" maxlength="10" placeholder="ABCDE1234F" class="mono-input" style="text-transform: uppercase;">
+          <div class="field-hint">Format: AAAAA9999A — 5th letter should match your last name's initial.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="field" id="f-aadhaar">
+          <label for="aadhaar">Aadhaar number <span class="optional">(optional)</span></label>
+          <input type="text" id="aadhaar" name="aadhaar" inputmode="numeric" maxlength="12" placeholder="XXXXXXXXXXXX" class="mono-input">
+          <div class="field-hint">12 digits, numbers only.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-section-title">Loan requirements</div>
+
+        <div class="field" id="f-loanType">
+          <label>Interested in <span class="req">*</span></label>
+          <div class="checkbox-group" role="group" aria-label="Loan type">
+            <div class="check-pill">
+              <input type="checkbox" id="loanHome" name="loanType" value="Home Loan">
+              <label for="loanHome">Home Loan</label>
+            </div>
+            <div class="check-pill">
+              <input type="checkbox" id="loanPersonal" name="loanType" value="Personal Loan">
+              <label for="loanPersonal">Personal Loan</label>
+            </div>
+            <div class="check-pill">
+              <input type="checkbox" id="loanBusiness" name="loanType" value="Business Loan">
+              <label for="loanBusiness">Business Loan</label>
+            </div>
+          </div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="field" id="f-amount">
+          <label for="amount">Required amount (₹) <span class="req">*</span></label>
+          <input type="text" id="amount" name="amount" inputmode="numeric" placeholder="500000" class="mono-input">
+          <div class="field-hint">Digits only, no commas.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="consent-row">
+          <input type="checkbox" id="consent" name="consent">
+          <label for="consent">I authorize CredBaba and its lending partners to contact me regarding this application and to process my personal data as described in the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms of Service</a>. <span class="req">*</span></label>
+        </div>
+        <div class="field-error" id="consentError" style="display:none; margin-top: -12px; margin-bottom: 16px;"></div>
+
+        <div class="form-submit-row">
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Submit Application</button>
+          <p class="form-note">No login needed. You can submit again anytime if your details change.</p>
+        </div>
+      </form>
+    </div>
+
+    <div class="success-panel card" id="successPanel">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h2>You're all set.</h2>
+      <p class="text-soft">We've received your application. A CredBaba representative will reach out to you shortly to guide you through the next steps.</p>
+      <a href="../index.html" class="btn btn-outline">Back to Home</a>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script src="../assets/js/validators.js"></script>
+<script src="../assets/js/form-submit.js"></script>
+<script src="../assets/js/apply-form.js"></script>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function () {
+    var menu = document.getElementById('mobileMenu');
+    var open = menu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terms of Service — CredBaba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<style>
+  .legal-content { max-width: 760px; margin: 0 auto; padding: var(--space-7) 0 var(--space-9); }
+  .legal-content h2 { font-size: var(--text-xl); margin-top: var(--space-7); }
+  .legal-content p, .legal-content li { color: var(--color-ink-soft); font-size: var(--text-base); }
+  .legal-content ul { list-style: disc; padding-left: 1.4em; margin-bottom: var(--space-4); }
+  .legal-content li { margin-bottom: var(--space-2); }
+  .updated-note { color: var(--color-ink-faint); font-size: var(--text-sm); margin-bottom: var(--space-6); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="brand"><span class="brand-mark">CB</span>CredBaba</a>
+    <nav class="nav-desktop">
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="apply.html">Get a Loan</a>
+        <a href="agent.html">Become an Agent</a>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.html">Home</a>
+    <a href="apply.html">Get a Loan</a>
+    <a href="agent.html">Become an Agent</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="legal-content">
+    <div class="eyebrow">Legal</div>
+    <h1>Terms of Service</h1>
+    <p class="updated-note">[Placeholder — Last updated: DD Month 2026. Replace with your finalized terms, ideally reviewed by legal counsel.]</p>
+
+    <p>Welcome to CredBaba. By accessing or using our website, submitting a loan application, or signing up as an agent, you agree to the following Terms of Service.</p>
+
+    <h2>1. About CredBaba</h2>
+    <p>CredBaba is a loan facilitation platform (DSA — Direct Selling Agent). We connect loan seekers with lending partners and are not ourselves a bank or NBFC. We do not guarantee loan approval, and all lending decisions rest solely with our partner lending institutions.</p>
+
+    <h2>2. Eligibility</h2>
+    <p>You must be at least 18 years of age to submit a loan application or agent signup through this website.</p>
+
+    <h2>3. Accuracy of information</h2>
+    <p>You agree to provide accurate, current, and complete information in all forms submitted. Providing false or misleading information (including PAN, Aadhaar, or contact details) may result in rejection of your application and, where applicable, referral to relevant authorities.</p>
+
+    <h2>4. No account, no editing</h2>
+    <p>Our forms do not require account creation or login. Once submitted, an entry cannot be edited directly. If your details change or you made an error, please submit the form again with corrected information.</p>
+
+    <h2>5. Agent terms</h2>
+    <p>Agents referring loan leads to CredBaba do so under the terms of a separate agent agreement, which may be shared with you after signup. Commission structures, payout timelines, and eligibility criteria will be communicated separately and are subject to change.</p>
+
+    <h2>6. Data use</h2>
+    <p>Your use of this website and submission of forms is also governed by our <a href="privacy.html">Privacy Policy</a>, which explains how we collect, use, and protect your information.</p>
+
+    <h2>7. Limitation of liability</h2>
+    <p>CredBaba is not liable for any loss arising from delays, inaccuracies, or decisions made by our lending partners. We make reasonable efforts to ensure the information on this site is accurate but do not guarantee it.</p>
+
+    <h2>8. Changes to these terms</h2>
+    <p>We may revise these Terms of Service from time to time. Continued use of the website after changes constitutes acceptance of the revised terms.</p>
+
+    <h2>9. Governing law</h2>
+    <p>These terms are governed by the laws of India. [Placeholder — confirm jurisdiction/courts with legal counsel.]</p>
+
+    <h2>10. Contact us</h2>
+    <p>For any questions about these Terms, reach us at [placeholder contact email] or [placeholder contact number].</p>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="privacy.html">Privacy Policy</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function () {
+    var menu = document.getElementById('mobileMenu');
+    var open = menu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
+</body>
+</html>

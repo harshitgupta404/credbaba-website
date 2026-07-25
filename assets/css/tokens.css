@@ -1,0 +1,248 @@
+/* ==========================================================================
+   CredBaba — Design Tokens
+   Indigo/violet core + antique gold accent. Ledger-line motif throughout.
+   ========================================================================== */
+
+:root {
+  /* ---- Color: Light mode (default) ---- */
+  --color-bg: #F7F6FB;
+  --color-bg-raised: #FFFFFF;
+  --color-surface: #EFEDF9;
+  --color-surface-2: #E8E6F5;
+  --color-ink: #14122B;
+  --color-ink-soft: #4A4768;
+  --color-ink-faint: #7E7B9C;
+  --color-border: #DEDBEE;
+  --color-border-strong: #C6C2E0;
+
+  --color-indigo: #4338CA;
+  --color-indigo-deep: #2C2470;
+  --color-indigo-soft: #EEEDFB;
+  --color-gold: #B4881E;
+  --color-gold-bright: #C9A227;
+  --color-gold-soft: #F6EFD9;
+
+  --color-success: #1E7A4C;
+  --color-success-soft: #E3F3EA;
+  --color-error: #B3261E;
+  --color-error-soft: #FBEAE9;
+
+  --gradient-hero: linear-gradient(135deg, #2C2470 0%, #4338CA 55%, #5B4FE0 100%);
+  --gradient-gold: linear-gradient(120deg, #C9A227 0%, #E4C558 50%, #B4881E 100%);
+
+  /* ---- Type ---- */
+  --font-display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 3rem;
+  --text-5xl: 3.75rem;
+
+  /* ---- Spacing scale ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+  --space-10: 8rem;
+
+  /* ---- Layout ---- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --container-max: 1180px;
+  --shadow-sm: 0 1px 2px rgba(20, 18, 43, 0.06), 0 1px 3px rgba(20, 18, 43, 0.08);
+  --shadow-md: 0 4px 14px rgba(20, 18, 43, 0.08), 0 2px 6px rgba(20, 18, 43, 0.06);
+  --shadow-lg: 0 20px 40px rgba(20, 18, 43, 0.14), 0 8px 16px rgba(20, 18, 43, 0.08);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 150ms;
+  --dur-med: 320ms;
+  --dur-slow: 560ms;
+}
+
+/* ---- Color: Dark mode ---- */
+[data-theme="dark"] {
+  --color-bg: #100E24;
+  --color-bg-raised: #17143336;
+  --color-bg-raised: #1A1738;
+  --color-surface: #1F1C40;
+  --color-surface-2: #262149;
+  --color-ink: #F1F0FA;
+  --color-ink-soft: #C4C1DE;
+  --color-ink-faint: #8E8AB4;
+  --color-border: #322C5C;
+  --color-border-strong: #423A73;
+
+  --color-indigo: #7C72E8;
+  --color-indigo-deep: #4338CA;
+  --color-indigo-soft: #241F4A;
+  --color-gold: #D9B646;
+  --color-gold-bright: #E4C558;
+  --color-gold-soft: #2E2818;
+
+  --color-success: #4ADE94;
+  --color-success-soft: #143323;
+  --color-error: #F0655D;
+  --color-error-soft: #3A1A19;
+
+  --gradient-hero: linear-gradient(135deg, #100E24 0%, #241F4A 50%, #4338CA 130%);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* ---- Reset ---- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  transition: background-color var(--dur-med) var(--ease-out), color var(--dur-med) var(--ease-out);
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { max-width: 100%; display: block; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0 0 var(--space-3);
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+p { margin: 0 0 var(--space-4); }
+ul { margin: 0; padding: 0; list-style: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-indigo);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-theme="dark"] :focus-visible {
+  outline-color: var(--color-gold-bright);
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+}
+
+/* ---- Ledger line: signature motif ----
+   A thin rule with a small tick, evoking a passbook/ledger entry line.
+   Used sparingly: section transitions, stat callouts, card headers. */
+.ledger-line {
+  position: relative;
+  height: 1px;
+  background: var(--color-border-strong);
+  margin: var(--space-6) 0;
+}
+.ledger-line::before {
+  content: "";
+  position: absolute;
+  left: 0; top: -3px;
+  width: 28px; height: 7px;
+  background: var(--gradient-gold);
+  border-radius: 2px;
+}
+
+/* ---- Stamped corner-notch: used on hero card + trust badges ---- */
+.notch-card {
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 0 100%);
+}
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.85rem 1.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-base);
+  transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary {
+  background: var(--gradient-gold);
+  color: #221A05;
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.btn-outline {
+  background: transparent;
+  border-color: var(--color-border-strong);
+  color: var(--color-ink);
+}
+.btn-outline:hover { border-color: var(--color-indigo); color: var(--color-indigo); }
+[data-theme="dark"] .btn-outline:hover { color: var(--color-gold-bright); border-color: var(--color-gold); }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* ---- Card ---- */
+.card {
+  background: var(--color-bg-raised);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Badge / eyebrow ---- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--color-gold);
+}
+.eyebrow::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--color-gold-bright);
+}
+
+/* ---- Utility ---- */
+.mono { font-family: var(--font-mono); }
+.text-soft { color: var(--color-ink-soft); }
+.text-faint { color: var(--color-ink-faint); }
+.center { text-align: center; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
