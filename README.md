@@ -19,27 +19,40 @@ credbaba/
 ├── pages/
 │   ├── apply.html              Legacy URL — redirect stub → /business-loan/ (kept for old links/bookmarks)
 │   ├── loan-thank-you.html     Shared post-submission Thank You page for all 3 loan pages
-│   ├── agent.html              Agent signup form
+│   ├── agent.html              Agent signup form (public "become an agent" interest form)
 │   ├── privacy.html            Privacy Policy (placeholder legal copy)
 │   └── terms.html              Terms of Service (placeholder legal copy)
+├── agent-portal/                Internal, login-gated tool for approved agents (noindex, not part of public nav)
+│   ├── login.html               Agent ID + password login
+│   ├── leads.html               Lead-entry form (loan-type dropdown) + change password, guarded by session
+│   ├── lead-submitted.html      Post-submission confirmation, guarded like loan-thank-you.html
+│   └── account-disabled.html    Shown when an agent's account is Suspended/Pending
 ├── assets/
 │   ├── css/
 │   │   ├── tokens.css          Design tokens: colors, type, spacing
 │   │   ├── site.css            Header, footer, hero, sections
-│   │   └── forms.css           Form field & validation styling
+│   │   ├── forms.css           Form field & validation styling
+│   │   └── agent-portal.css    Session bar, change-password panel, disabled-account state
 │   └── js/
 │       ├── theme.js            Light/dark mode toggle
 │       ├── validators.js       All PRD validation rules, shared by every form
 │       ├── form-submit.js       Shared Apps Script POST helper
 │       ├── loan-form.js        Shared logic for all 3 loan pages (reads loan type from a data attribute)
 │       ├── agent-form.js       Agent form wiring (validation + submit)
-│       └── loan-thank-you.js   Renders/guards the loan Thank You page
+│       ├── loan-thank-you.js   Renders/guards the loan Thank You page
+│       ├── agent-portal-common.js   Session storage + shared guards for the Agent Portal
+│       ├── agent-portal-login.js    Agent Portal login logic
+│       ├── agent-portal-leads.js    Agent Portal lead form + change-password logic
+│       ├── agent-lead-submitted.js  Guards/renders the Agent Portal confirmation page
+│       └── agent-account-disabled.js Renders the Agent Portal disabled-account page
 ├── apps-script/
 │   ├── loan-leads-script.gs    Google Apps Script for loan leads sheet
 │   ├── agent-leads-script.gs   Google Apps Script for agent leads sheet
-│   └── README.md               Step-by-step Sheets + Apps Script setup
-├── sitemap.xml                 Lists homepage, 3 loan pages, agent, privacy, terms
-├── robots.txt                  Allows crawling, points to sitemap.xml
+│   ├── agent-portal-script.gs  Google Apps Script for Agent Portal login/lead-tagging/password-change
+│   └── README.md               Step-by-step Sheets + Apps Script setup, incl. Agent Portal
+├── agent-portal-plan.md        Design rationale for the Agent Portal (problem, architecture, trade-offs)
+├── sitemap.xml                 Lists homepage, 3 loan pages, agent, privacy, terms (Agent Portal excluded — noindex)
+├── robots.txt                  Allows crawling, points to sitemap.xml, disallows Agent Portal
 ├── CNAME                       GitHub Pages custom domain config (credbaba.com)
 ├── CHANGELOG.md                Dated log of every site change
 └── .nojekyll                   Tells GitHub Pages not to run Jekyll processing
@@ -99,12 +112,49 @@ analytics tool can distinguish from the form page itself. The page is
 marked `noindex` since it's a transactional destination, not content meant
 to rank in search.
 
+## Agent Portal (login-gated lead entry, tagged for payout)
+
+Agents were previously keying in customer leads through the same public
+loan-application forms customers use themselves, with no way to record
+*which* agent submitted a given lead — which made payout attribution
+unreliable. `/agent-portal/` solves this with a small login-gated section
+of the site, separate from the public pages:
+
+1. An approved agent logs in at `agent-portal/login.html` with an Agent ID
+   and password issued by CredBaba staff (see `apps-script/README.md`'s
+   "Onboarding an agent" section). The login only lasts the browser
+   session — closing the browser logs them out.
+2. Once in, `agent-portal/leads.html` is a single lead-entry form (loan
+   type picked from a dropdown, rather than three separate SEO pages,
+   since this internal tool has no SEO need) that submits leads tagged
+   with that agent's ID and name to a dedicated **"CredBaba Agent-Sourced
+   Leads"** Google Sheet — kept separate from the public "CredBaba Loan
+   Leads" sheet so payout reporting never needs to filter out direct
+   customer applications.
+3. Every submission is re-verified server-side against the agent's current
+   Status in Apps Script, not just trusted from the browser — so an agent
+   suspended mid-session gets rejected on their very next submission, not
+   just at their next login.
+4. Agents can change their own password from the leads page once logged
+   in; the initial password is always system-generated, never staff-typed.
+5. Approval is now almost hands-off: every "Become an Agent" signup
+   (`pages/agent.html`) auto-creates a Pending Credentials row already, so
+   an admin typically just reviews and flips Status to Approved rather
+   than creating the row and generating a password by hand — see
+   `apps-script/README.md`'s "Onboarding an agent" section.
+
+Full design rationale, including the security trade-offs of running this
+on a static site with no real server, is in
+**[`agent-portal-plan.md`](agent-portal-plan.md)**.
+
 ## Part 1 — Connect the forms to Google Sheets
 
-Follow **`apps-script/README.md`** first. You need two Apps Script Web App
-URLs (one per form) pasted into `assets/js/loan-form.js` (shared by all
-three loan pages) and `assets/js/agent-form.js` before the forms will
-actually save data.
+Follow **`apps-script/README.md`** first. You need three Apps Script Web
+App URLs: one for the public loan forms (pasted into
+`assets/js/loan-form.js`, shared by all three loan pages), one for the
+public agent signup form (`assets/js/agent-form.js`), and one for the
+Agent Portal (pasted into both `assets/js/agent-portal-login.js` and
+`assets/js/agent-portal-leads.js`) — before anything actually saves data.
 
 ## Part 2 — Push the code to GitHub
 
@@ -222,7 +272,15 @@ Since there's no build step, editing is direct:
       handling).
 - [ ] Replace placeholder contact emails/phone numbers in Privacy/Terms
       pages.
-- [ ] Confirm the two Apps Script URLs are live and tested end-to-end.
+- [ ] Confirm all three Apps Script URLs (loan, agent signup, Agent
+      Portal) are live and tested end-to-end — see `apps-script/README.md`
+      for the Agent Portal's specific test checklist.
+- [ ] Onboard your current active agents into the "CredBaba Agent
+      Credentials" sheet and share their initial passwords.
+- [ ] Ongoing: periodically rotate `AGENT_SIGNUP_VERIFICATION_CODE` in
+      `assets/js/agent-form.js` (random letters/numbers, any length) and
+      redeploy — the whole point of this lightweight anti-spam gate is
+      that the code changes, not any single value being hard to guess.
 - [ ] Decide on the credbaba.in strategy (redirect vs. mirrored site).
 - [ ] Optional: add a real analytics tool if you want visit tracking
       (keep it privacy-respecting, per the Privacy Policy's claims).
