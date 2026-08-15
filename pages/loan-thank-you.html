@@ -11,8 +11,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, follow">
-<meta http-equiv="refresh" content="0; url=../business-loan/">
-<title>Redirecting… — CredBaba</title>
+<title>Thank You — CredBaba</title>
+<meta name="description" content="Thank you for applying with CredBaba. Our representative will be in touch shortly.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -55,12 +55,14 @@
 </header>
 
 <main>
-  <div class="form-wrap container" style="padding-top: var(--space-8); text-align:center;">
-    <div class="card">
-      <div class="eyebrow center" style="justify-content:center;">Page Moved</div>
-      <h1>Redirecting you to Business Loan…</h1>
-      <p class="text-soft">Loan applications now live on their own dedicated pages. You're being redirected automatically — if nothing happens, use the link below.</p>
-      <a href="../business-loan/" class="btn btn-primary">Continue to Business Loan →</a>
+  <div class="form-wrap container" style="padding-top: var(--space-8);">
+    <div class="success-panel card show" id="thankYouPanel">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+      <h1 id="thankYouHeading">Thank You for Your Interest</h1>
+      <p class="text-soft" id="thankYouMessage">Our representative will review your details and get in touch with you shortly. We appreciate your interest and look forward to assisting you.</p>
+      <a href="../index.html" class="btn btn-outline">Back to Home</a>
     </div>
   </div>
 </main>
@@ -70,13 +72,13 @@
     <div class="ledger-line"></div>
     <div class="footer-bottom">
       <span>© 2026 CredBaba. All rights reserved.</span>
-      <span><a href="../pages/agent.html">Become an Agent</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+      <span><a href="agent.html">Become an Agent</a> · <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
     </div>
   </div>
 </footer>
 
 <script src="../assets/js/theme.js"></script>
-<script>window.location.replace('../business-loan/');</script>
+<script src="../assets/js/loan-thank-you.js"></script>
 <script>
   document.getElementById('navToggle').addEventListener('click', function () {
     var menu = document.getElementById('mobileMenu');

@@ -10,8 +10,9 @@
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Become an Agent — CredBaba</title>
-<meta name="description" content="Join CredBaba as an agent and earn by referring loan leads. Simple signup, no login required.">
+<title>Apply for a Business Loan — CredBaba</title>
+<meta name="description" content="Apply for a Business Loan with CredBaba. Simple, secure, no login required.">
+<link rel="canonical" href="https://credbaba.com/business-loan/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -32,7 +33,7 @@
         <a href="../index.html">Home</a>
         <a href="../home-loan/">Home Loan</a>
         <a href="../personal-loan/">Personal Loan</a>
-        <a href="../business-loan/">Business Loan</a>
+        <a href="../business-loan/" class="active">Business Loan</a>
       </div>
     </nav>
     <div class="header-actions">
@@ -55,32 +56,39 @@
 
 <main>
   <div class="form-page-header container">
-    <div class="eyebrow">Agent Signup</div>
-    <h1>Grow your income with CredBaba.</h1>
-    <p>Sign up as an agent and start receiving loan leads to refer. It takes less than 2 minutes.</p>
+    <div class="eyebrow">Business Loan Application</div>
+    <h1>Let's get your Business Loan started.</h1>
+    <p>Fill in your details below. It takes about 2 minutes, and everything is checked instantly so you know it's gone through correctly.</p>
   </div>
 
   <div class="form-wrap container">
     <div class="form-banner" id="formBanner" role="status"></div>
 
     <div class="form-card" id="formCard">
-      <form id="agentForm" novalidate>
+      <form id="loanForm" data-loan-type="Business Loan" novalidate>
 
         <div class="form-section-title">Personal details</div>
 
         <div class="form-row">
           <div class="field" id="f-firstName">
             <label for="firstName">First name <span class="req">*</span></label>
-            <input type="text" id="firstName" name="firstName" autocomplete="given-name" placeholder="Anita">
+            <input type="text" id="firstName" name="firstName" autocomplete="given-name" placeholder="Ravi">
             <div class="field-hint">Letters only.</div>
             <div class="field-error"></div>
           </div>
           <div class="field" id="f-lastName">
             <label for="lastName">Last name <span class="req">*</span></label>
-            <input type="text" id="lastName" name="lastName" autocomplete="family-name" placeholder="Sharma">
+            <input type="text" id="lastName" name="lastName" autocomplete="family-name" placeholder="Kumar">
             <div class="field-hint">Letters only.</div>
             <div class="field-error"></div>
           </div>
+        </div>
+
+        <div class="field" id="f-fatherName">
+          <label for="fatherName">Father's name <span class="req">*</span></label>
+          <input type="text" id="fatherName" name="fatherName" placeholder="Suresh Kumar">
+          <div class="field-hint">Letters only.</div>
+          <div class="field-error"></div>
         </div>
 
         <div class="form-row">
@@ -114,7 +122,7 @@
 
         <div class="form-row">
           <div class="field" id="f-mobile">
-            <label for="mobile">Mobile number <span class="req">*</span></label>
+            <label for="mobile">Mobile number (PAN linked) <span class="req">*</span></label>
             <input type="tel" id="mobile" name="mobile" inputmode="numeric" maxlength="10" placeholder="98XXXXXXXX" class="mono-input">
             <div class="field-hint">10 digits, starting with 6, 7, 8, or 9.</div>
             <div class="field-error"></div>
@@ -127,33 +135,42 @@
           </div>
         </div>
 
-        <div class="field" id="f-pincode">
-          <label for="pincode">Pincode <span class="req">*</span></label>
-          <input type="text" id="pincode" name="pincode" inputmode="numeric" maxlength="6" placeholder="560001" class="mono-input">
-          <div class="field-hint">6-digit Indian PIN code.</div>
+        <div class="form-section-title">Identity details</div>
+
+        <div class="field" id="f-pan">
+          <label for="pan">PAN number <span class="req">*</span></label>
+          <input type="text" id="pan" name="pan" maxlength="10" placeholder="ABCDE1234F" class="mono-input" style="text-transform: uppercase;">
+          <div class="field-hint">Format: AAAAA9999A — 5th letter should match your last name's initial.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="field" id="f-aadhaar">
+          <label for="aadhaar">Aadhaar number <span class="optional">(optional)</span></label>
+          <input type="text" id="aadhaar" name="aadhaar" inputmode="numeric" maxlength="12" placeholder="XXXXXXXXXXXX" class="mono-input">
+          <div class="field-hint">12 digits, numbers only.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-section-title">Loan requirements</div>
+
+        <div class="field" id="f-amount">
+          <label for="amount">Required amount (₹) <span class="req">*</span></label>
+          <input type="text" id="amount" name="amount" inputmode="numeric" placeholder="500000" class="mono-input">
+          <div class="field-hint">Digits only, no commas.</div>
           <div class="field-error"></div>
         </div>
 
         <div class="consent-row">
           <input type="checkbox" id="consent" name="consent">
-          <label for="consent">I authorize CredBaba to contact me regarding agent opportunities and to process my personal data as described in the <a href="privacy.html" target="_blank">Privacy Policy</a> and <a href="terms.html" target="_blank">Terms of Service</a>. <span class="req">*</span></label>
+          <label for="consent">I authorize CredBaba and its lending partners to contact me regarding this application and to process my personal data as described in the <a href="../pages/privacy.html" target="_blank">Privacy Policy</a> and <a href="../pages/terms.html" target="_blank">Terms of Service</a>. <span class="req">*</span></label>
         </div>
         <div class="field-error" id="consentError" style="display:none; margin-top: -12px; margin-bottom: 16px;"></div>
 
         <div class="form-submit-row">
-          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Submit Signup</button>
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Submit Business Loan Application</button>
           <p class="form-note">No login needed. You can submit again anytime if your details change.</p>
         </div>
       </form>
-    </div>
-
-    <div class="success-panel card" id="successPanel">
-      <div class="success-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
-      </div>
-      <h2>Welcome aboard.</h2>
-      <p class="text-soft">We've received your signup. A CredBaba team member will reach out with your next steps and first set of leads.</p>
-      <a href="../index.html" class="btn btn-outline">Back to Home</a>
     </div>
   </div>
 </main>
@@ -163,7 +180,7 @@
     <div class="ledger-line"></div>
     <div class="footer-bottom">
       <span>© 2026 CredBaba. All rights reserved.</span>
-      <span><a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a></span>
+      <span><a href="../pages/agent.html">Become an Agent</a> · <a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
     </div>
   </div>
 </footer>
@@ -171,7 +188,7 @@
 <script src="../assets/js/theme.js"></script>
 <script src="../assets/js/validators.js"></script>
 <script src="../assets/js/form-submit.js"></script>
-<script src="../assets/js/agent-form.js"></script>
+<script src="../assets/js/loan-form.js"></script>
 <script>
   document.getElementById('navToggle').addEventListener('click', function () {
     var menu = document.getElementById('mobileMenu');

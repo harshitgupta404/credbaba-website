@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /pages/loan-thank-you.html
+
+Sitemap: https://credbaba.com/sitemap.xml

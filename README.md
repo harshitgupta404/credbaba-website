@@ -13,8 +13,12 @@ Pages.
 ```
 credbaba/
 ├── index.html                 Homepage
+├── home-loan/index.html       Home Loan landing + application (credbaba.com/home-loan/)
+├── personal-loan/index.html   Personal Loan landing + application (credbaba.com/personal-loan/)
+├── business-loan/index.html   Business Loan landing + application (credbaba.com/business-loan/) — default apply target
 ├── pages/
-│   ├── apply.html              Loan application form
+│   ├── apply.html              Legacy URL — redirect stub → /business-loan/ (kept for old links/bookmarks)
+│   ├── loan-thank-you.html     Shared post-submission Thank You page for all 3 loan pages
 │   ├── agent.html              Agent signup form
 │   ├── privacy.html            Privacy Policy (placeholder legal copy)
 │   └── terms.html              Terms of Service (placeholder legal copy)
@@ -25,23 +29,82 @@ credbaba/
 │   │   └── forms.css           Form field & validation styling
 │   └── js/
 │       ├── theme.js            Light/dark mode toggle
-│       ├── validators.js       All PRD validation rules, shared by both forms
+│       ├── validators.js       All PRD validation rules, shared by every form
 │       ├── form-submit.js       Shared Apps Script POST helper
-│       ├── apply-form.js       Loan form wiring (validation + submit)
-│       └── agent-form.js       Agent form wiring (validation + submit)
+│       ├── loan-form.js        Shared logic for all 3 loan pages (reads loan type from a data attribute)
+│       ├── agent-form.js       Agent form wiring (validation + submit)
+│       └── loan-thank-you.js   Renders/guards the loan Thank You page
 ├── apps-script/
 │   ├── loan-leads-script.gs    Google Apps Script for loan leads sheet
 │   ├── agent-leads-script.gs   Google Apps Script for agent leads sheet
 │   └── README.md               Step-by-step Sheets + Apps Script setup
+├── sitemap.xml                 Lists homepage, 3 loan pages, agent, privacy, terms
+├── robots.txt                  Allows crawling, points to sitemap.xml
 ├── CNAME                       GitHub Pages custom domain config (credbaba.com)
+├── CHANGELOG.md                Dated log of every site change
 └── .nojekyll                   Tells GitHub Pages not to run Jekyll processing
 ```
+
+Every change made to this site is logged in **[`CHANGELOG.md`](CHANGELOG.md)** with a
+date, so you can always see what changed and when.
+
+## Loan pages (SEO-dedicated URLs)
+
+Each major loan type has its own page/URL instead of one generic form with
+a loan-type checkbox:
+
+- `home-loan/index.html` → `https://credbaba.com/home-loan/`
+- `personal-loan/index.html` → `https://credbaba.com/personal-loan/`
+- `business-loan/index.html` → `https://credbaba.com/business-loan/`
+  (the default — homepage CTAs and the legacy `/pages/apply.html` URL
+  both point here, since it generates the most leads)
+
+All three share `assets/js/loan-form.js`; the loan type is fixed per page
+via `<form id="loanForm" data-loan-type="Home Loan" ...>` rather than a
+checkbox, so a lead is always tied to exactly one loan type. The trade-off:
+someone interested in more than one loan type submits the form again on
+the other page, rather than multi-selecting in one submission.
+
+`pages/apply.html` is kept only as a `noindex` redirect stub (meta-refresh
++ JS) pointing to `/business-loan/`, so any old bookmarks or inbound links
+still land somewhere useful. GitHub Pages has no server-side 301 config
+(this repo disables Jekyll via `.nojekyll`), so this client-side redirect
+is the closest equivalent available without a build step.
+
+The site header/footer nav was restructured to match: the header now
+lists Home / Home Loan / Personal Loan / Business Loan (flat links, no
+dropdown); "Become an Agent" moved out of the header into the footer on
+every page.
+
+## Loan application Thank You flow
+
+None of the loan pages show an in-page success message after submitting.
+Instead, on a successful submission, `assets/js/loan-form.js`:
+
+1. Stores the page's loan type in `sessionStorage` under the key
+   `cbLoanThankYou` (one-time use).
+2. Redirects the browser to `pages/loan-thank-you.html`.
+
+That page (via `assets/js/loan-thank-you.js`) reads the flag, shows
+"Thank You for Your Interest in [Loan Type]…", and immediately clears the
+flag. If someone opens `loan-thank-you.html` directly — a shared link,
+bookmark, or refresh without a fresh submission — there's no flag, so the
+script redirects them straight to the homepage instead of showing a Thank
+You message for something they never submitted.
+
+This gives the SEO/marketing team a real, dedicated URL
+(`/pages/loan-thank-you.html`) to set as a conversion goal in Google
+Analytics/Ads, rather than a same-URL content swap that no crawler or
+analytics tool can distinguish from the form page itself. The page is
+marked `noindex` since it's a transactional destination, not content meant
+to rank in search.
 
 ## Part 1 — Connect the forms to Google Sheets
 
 Follow **`apps-script/README.md`** first. You need two Apps Script Web App
-URLs (one per form) pasted into `assets/js/apply-form.js` and
-`assets/js/agent-form.js` before the forms will actually save data.
+URLs (one per form) pasted into `assets/js/loan-form.js` (shared by all
+three loan pages) and `assets/js/agent-form.js` before the forms will
+actually save data.
 
 ## Part 2 — Push the code to GitHub
 
@@ -163,3 +226,9 @@ Since there's no build step, editing is direct:
 - [ ] Decide on the credbaba.in strategy (redirect vs. mirrored site).
 - [ ] Optional: add a real analytics tool if you want visit tracking
       (keep it privacy-respecting, per the Privacy Policy's claims).
+- [ ] The home-loan/personal-loan/business-loan pages currently reuse the
+      same generic copy (just the loan type name swapped in) — no unique
+      eligibility criteria, required documents, rates/tenure info, or FAQ
+      per page yet. Search engines can treat near-identical pages as thin
+      content, which undermines the point of splitting them out. Add real,
+      distinct content per loan type when it's available.
