@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<script>
+  // Guard, run before paint so an unauthenticated visitor never sees a
+  // flash of the lead-entry form: mirrors the theme flash-prevention
+  // pattern above. The full session read (for rendering "Logged in as X")
+  // happens later in agent-portal-leads.js.
+  (function () {
+    var raw = null;
+    try { raw = sessionStorage.getItem('cbAgentSession'); } catch (e) {}
+    if (!raw) { window.location.replace('login.html'); }
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Submit a Lead — CredBaba Agent Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/forms.css">
+<link rel="stylesheet" href="../assets/css/agent-portal.css">
+</head>
+<body>
+
+<header class="site-header agent-portal-header">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <span class="brand-mark">CB</span>
+      CredBaba
+      <span class="agent-portal-badge">Agent Portal</span>
+    </a>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="form-page-header container">
+    <div class="eyebrow">Agent Portal</div>
+    <h1>Submit a new lead.</h1>
+    <p>Fill in your customer's details below. This submission will be tagged to your agent account automatically.</p>
+  </div>
+
+  <div class="form-wrap container">
+    <div class="agent-session-bar">
+      <span class="who">Logged in as <span class="agent-name" id="sessionAgentName">…</span></span>
+      <span class="actions">
+        <button type="button" class="link-btn" id="changePasswordToggle">Change Password</button>
+        <button type="button" class="link-btn" id="logoutBtn">Logout</button>
+      </span>
+    </div>
+
+    <div class="change-password-panel" id="changePasswordPanel">
+      <h3>Change your password</h3>
+      <div class="form-banner" id="pwBanner" role="status"></div>
+      <form id="changePasswordForm" novalidate>
+        <div class="field" id="f-oldPassword">
+          <label for="oldPassword">Current password <span class="req">*</span></label>
+          <input type="password" id="oldPassword" name="oldPassword" autocomplete="current-password">
+          <div class="field-error"></div>
+        </div>
+        <div class="field" id="f-newPassword">
+          <label for="newPassword">New password <span class="req">*</span></label>
+          <input type="password" id="newPassword" name="newPassword" autocomplete="new-password">
+          <div class="field-hint">At least 6 characters.</div>
+          <div class="field-error"></div>
+        </div>
+        <div class="field" id="f-confirmPassword">
+          <label for="confirmPassword">Confirm new password <span class="req">*</span></label>
+          <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password">
+          <div class="field-error"></div>
+        </div>
+        <div class="form-submit-row">
+          <button type="submit" class="btn btn-outline" id="changePasswordBtn">Update Password</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="form-banner" id="formBanner" role="status"></div>
+
+    <div class="form-card" id="formCard">
+      <form id="leadForm" novalidate>
+
+        <div class="form-section-title">Loan details</div>
+
+        <div class="field" id="f-loanType">
+          <label for="loanType">Loan type <span class="req">*</span></label>
+          <select id="loanType" name="loanType">
+            <option value="">Select a loan type</option>
+            <option value="Home Loan">Home Loan</option>
+            <option value="Personal Loan">Personal Loan</option>
+            <option value="Business Loan">Business Loan</option>
+          </select>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-section-title">Personal details</div>
+
+        <div class="form-row">
+          <div class="field" id="f-firstName">
+            <label for="firstName">First name <span class="req">*</span></label>
+            <input type="text" id="firstName" name="firstName" placeholder="Ravi">
+            <div class="field-hint">Letters only.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-lastName">
+            <label for="lastName">Last name <span class="req">*</span></label>
+            <input type="text" id="lastName" name="lastName" placeholder="Kumar">
+            <div class="field-hint">Letters only.</div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="field" id="f-fatherName">
+          <label for="fatherName">Father's name <span class="req">*</span></label>
+          <input type="text" id="fatherName" name="fatherName" placeholder="Suresh Kumar">
+          <div class="field-hint">Letters only.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="field" id="f-dob">
+            <label for="dob">Date of birth <span class="req">*</span></label>
+            <input type="date" id="dob" name="dob">
+            <div class="field-hint">Must be 18 or older.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-gender">
+            <label>Gender <span class="req">*</span></label>
+            <div class="radio-group" role="radiogroup" aria-label="Gender">
+              <div class="radio-pill">
+                <input type="radio" id="genderMale" name="gender" value="Male">
+                <label for="genderMale">Male</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="genderFemale" name="gender" value="Female">
+                <label for="genderFemale">Female</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="genderOther" name="gender" value="Other">
+                <label for="genderOther">Other</label>
+              </div>
+            </div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="form-section-title">Contact details</div>
+
+        <div class="form-row">
+          <div class="field" id="f-mobile">
+            <label for="mobile">Mobile number (PAN linked) <span class="req">*</span></label>
+            <input type="tel" id="mobile" name="mobile" inputmode="numeric" maxlength="10" placeholder="98XXXXXXXX" class="mono-input">
+            <div class="field-hint">10 digits, starting with 6, 7, 8, or 9.</div>
+            <div class="field-error"></div>
+          </div>
+          <div class="field" id="f-altMobile">
+            <label for="altMobile">Alternate number <span class="optional">(optional)</span></label>
+            <input type="tel" id="altMobile" name="altMobile" inputmode="numeric" maxlength="10" placeholder="98XXXXXXXX" class="mono-input">
+            <div class="field-hint">10 digits, starting with 6, 7, 8, or 9.</div>
+            <div class="field-error"></div>
+          </div>
+        </div>
+
+        <div class="form-section-title">Identity details</div>
+
+        <div class="field" id="f-pan">
+          <label for="pan">PAN number <span class="req">*</span></label>
+          <input type="text" id="pan" name="pan" maxlength="10" placeholder="ABCDE1234F" class="mono-input" style="text-transform: uppercase;">
+          <div class="field-hint">Format: AAAAA9999A — 5th letter should match the last name's initial.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="field" id="f-aadhaar">
+          <label for="aadhaar">Aadhaar number <span class="optional">(optional)</span></label>
+          <input type="text" id="aadhaar" name="aadhaar" inputmode="numeric" maxlength="12" placeholder="XXXXXXXXXXXX" class="mono-input">
+          <div class="field-hint">12 digits, numbers only.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-section-title">Loan requirements</div>
+
+        <div class="field" id="f-amount">
+          <label for="amount">Required amount (₹) <span class="req">*</span></label>
+          <input type="text" id="amount" name="amount" inputmode="numeric" placeholder="500000" class="mono-input">
+          <div class="field-hint">Digits only, no commas.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="consent-row">
+          <input type="checkbox" id="consent" name="consent">
+          <label for="consent">I confirm the customer has authorized CredBaba and its lending partners to contact them regarding this application and to process their personal data as described in the <a href="../pages/privacy.html" target="_blank">Privacy Policy</a> and <a href="../pages/terms.html" target="_blank">Terms of Service</a>. <span class="req">*</span></label>
+        </div>
+        <div class="field-error" id="consentError" style="display:none; margin-top: -12px; margin-bottom: 16px;"></div>
+
+        <div class="form-submit-row">
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Submit Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script src="../assets/js/validators.js"></script>
+<script src="../assets/js/form-submit.js"></script>
+<script src="../assets/js/agent-portal-common.js"></script>
+<script src="../assets/js/agent-portal-leads.js"></script>
+</body>
+</html>

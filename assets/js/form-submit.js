@@ -21,7 +21,13 @@ async function submitToAppsScript(scriptUrl, payload) {
   let data = null;
   try { data = await res.json(); } catch (e) { /* ignore, treat as success if no throw */ }
   if (data && data.result === 'error') {
-    throw new Error(data.message || 'Submission failed. Please try again.');
+    const err = new Error(data.message || 'Submission failed. Please try again.');
+    // Some callers (e.g. the Agent Portal) need to distinguish *why* a
+    // request failed — a suspended account should route somewhere
+    // different than a plain wrong-password message. Optional and unused
+    // by existing callers, so this is backward-compatible.
+    if (data.reason) err.reason = data.reason;
+    throw err;
   }
   return data;
 }

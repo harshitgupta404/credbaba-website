@@ -58,6 +58,7 @@
     <div class="eyebrow">Agent Signup</div>
     <h1>Grow your income with CredBaba.</h1>
     <p>Sign up as an agent and start receiving loan leads to refer. It takes less than 2 minutes.</p>
+    <p class="text-soft">Already an agent? <a href="../agent-portal/login.html" style="color: var(--color-indigo); font-weight: 600;">Log in to submit a lead</a>.</p>
   </div>
 
   <div class="form-wrap container">
@@ -131,6 +132,15 @@
           <label for="pincode">Pincode <span class="req">*</span></label>
           <input type="text" id="pincode" name="pincode" inputmode="numeric" maxlength="6" placeholder="560001" class="mono-input">
           <div class="field-hint">6-digit Indian PIN code.</div>
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-section-title">Verification</div>
+
+        <div class="field" id="f-verifyCode">
+          <label for="verifyCode">Enter this code: <span class="mono-input verify-code-display" id="verifyCodeDisplay">......</span></label>
+          <input type="text" id="verifyCode" name="verifyCode" autocomplete="off" placeholder="Type the code above" class="mono-input" style="text-transform: uppercase;">
+          <div class="field-hint">Just to confirm you're not a bot.</div>
           <div class="field-error"></div>
         </div>
 

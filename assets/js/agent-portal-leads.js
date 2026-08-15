@@ -1,0 +1,272 @@
+// ==========================================================================
+// CredBaba — Agent Portal lead-entry logic
+// Reuses the same CredBabaValidators used by the public loan pages, plus a
+// loan-type dropdown (this internal tool doesn't need the SEO-driven
+// three-separate-pages split the public site uses).
+// ==========================================================================
+
+// IMPORTANT: Replace this with your deployed Google Apps Script Web App URL
+// for the Agent Portal. See /apps-script/agent-portal-script.gs setup notes.
+const AGENT_PORTAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9NXHd50tTfGblKiSJNAFQIx4wf5GGWskegzFzWCPeZiFLz-g-YVgCrq8TXSLMwDI7/exec';
+
+(function () {
+  const V = CredBabaValidators;
+
+  // The <head> inline script already redirects unauthenticated visitors
+  // before paint; this is a defense-in-depth re-check for the rest of the
+  // page logic, which needs the actual session data anyway.
+  const session = CredBabaAgentPortal.getSession();
+  if (!session) {
+    CredBabaAgentPortal.goTo('login.html');
+    return;
+  }
+  CredBabaAgentPortal.renderSessionBar('sessionAgentName', 'logoutBtn');
+
+  // ---- Change password panel ----
+  const toggleBtn = document.getElementById('changePasswordToggle');
+  const panel = document.getElementById('changePasswordPanel');
+  toggleBtn.addEventListener('click', function () {
+    panel.classList.toggle('open');
+  });
+
+  const pwForm = document.getElementById('changePasswordForm');
+  const pwBanner = document.getElementById('pwBanner');
+  const pwBtn = document.getElementById('changePasswordBtn');
+
+  function showPwBanner(type, message) {
+    pwBanner.className = 'form-banner show ' + type;
+    pwBanner.innerHTML = message;
+  }
+  function hidePwBanner() {
+    pwBanner.className = 'form-banner';
+    pwBanner.innerHTML = '';
+  }
+
+  pwForm.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    hidePwBanner();
+
+    const oldPassword = document.getElementById('oldPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      showPwBanner('error', 'All fields are required.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      showPwBanner('error', 'New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showPwBanner('error', 'New password and confirmation do not match.');
+      return;
+    }
+
+    pwBtn.disabled = true;
+    showPwBanner('loading', 'Updating password…');
+
+    try {
+      await submitToAppsScript(AGENT_PORTAL_SCRIPT_URL, {
+        action: 'changePassword',
+        agentId: session.agentId,
+        oldPassword: oldPassword,
+        newPassword: newPassword,
+      });
+      showPwBanner('success', 'Password updated.');
+      pwForm.reset();
+    } catch (err) {
+      if (err.reason === 'suspended' || err.reason === 'pending') {
+        CredBabaAgentPortal.goToDisabled(err.reason);
+        return;
+      }
+      showPwBanner('error', err.message || 'Something went wrong. Please try again.');
+    } finally {
+      pwBtn.disabled = false;
+    }
+  });
+
+  // ---- Lead form ----
+  const form = document.getElementById('leadForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const banner = document.getElementById('formBanner');
+
+  function setFieldState(fieldId, result) {
+    const field = document.getElementById(fieldId);
+    if (!field) return result.valid;
+    const errorEl = field.querySelector('.field-error');
+    if (result.valid) {
+      field.classList.remove('has-error');
+      field.classList.add('has-success');
+      if (errorEl) errorEl.textContent = '';
+    } else {
+      field.classList.add('has-error');
+      field.classList.remove('has-success');
+      if (errorEl) errorEl.textContent = result.message;
+    }
+    return result.valid;
+  }
+
+  function getLastName() {
+    return document.getElementById('lastName').value;
+  }
+  function getSelectedGender() {
+    const el = form.querySelector('input[name="gender"]:checked');
+    return el ? el.value : '';
+  }
+  function validateLoanType() {
+    const value = document.getElementById('loanType').value;
+    const result = value ? { valid: true, message: '' } : { valid: false, message: 'Select a loan type.' };
+    return setFieldState('f-loanType', result);
+  }
+
+  function validateField(name) {
+    switch (name) {
+      case 'loanType':
+        return validateLoanType();
+      case 'firstName':
+        return setFieldState('f-firstName', V.validateName(document.getElementById('firstName').value, 'First name'));
+      case 'lastName':
+        return setFieldState('f-lastName', V.validateName(document.getElementById('lastName').value, 'Last name'));
+      case 'fatherName':
+        return setFieldState('f-fatherName', V.validateName(document.getElementById('fatherName').value, "Father's name"));
+      case 'dob':
+        return setFieldState('f-dob', V.validateDOB(document.getElementById('dob').value));
+      case 'gender':
+        return setFieldState('f-gender', V.validateGender(getSelectedGender()));
+      case 'mobile':
+        return setFieldState('f-mobile', V.validateMobile(document.getElementById('mobile').value, { label: 'Mobile number' }));
+      case 'altMobile':
+        return setFieldState('f-altMobile', V.validateMobile(document.getElementById('altMobile').value, { optional: true, label: 'Alternate number' }));
+      case 'pan':
+        return setFieldState('f-pan', V.validatePAN(document.getElementById('pan').value, getLastName()));
+      case 'aadhaar':
+        return setFieldState('f-aadhaar', V.validateAadhaar(document.getElementById('aadhaar').value));
+      case 'amount':
+        return setFieldState('f-amount', V.validateRequiredAmount(document.getElementById('amount').value));
+      default:
+        return true;
+    }
+  }
+
+  function validateAll() {
+    const fields = ['loanType', 'firstName', 'lastName', 'fatherName', 'dob', 'gender', 'mobile', 'altMobile', 'pan', 'aadhaar', 'amount'];
+    let allValid = true;
+    fields.forEach((f) => { if (!validateField(f)) allValid = false; });
+
+    const consentEl = document.getElementById('consent');
+    const consentResult = V.validateConsent(consentEl.checked);
+    const consentErrorEl = document.getElementById('consentError');
+    if (!consentResult.valid) {
+      consentErrorEl.style.display = 'flex';
+      consentErrorEl.textContent = consentResult.message;
+      allValid = false;
+    } else {
+      consentErrorEl.style.display = 'none';
+    }
+    return allValid;
+  }
+
+  document.getElementById('loanType').addEventListener('change', () => validateField('loanType'));
+
+  ['firstName', 'lastName', 'fatherName', 'dob', 'pan', 'aadhaar', 'amount'].forEach((id) => {
+    document.getElementById(id).addEventListener('blur', () => validateField(id));
+  });
+
+  document.getElementById('mobile').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 10);
+  });
+  document.getElementById('mobile').addEventListener('blur', () => validateField('mobile'));
+
+  document.getElementById('altMobile').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 10);
+  });
+  document.getElementById('altMobile').addEventListener('blur', () => validateField('altMobile'));
+
+  document.getElementById('aadhaar').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '').slice(0, 12);
+  });
+
+  document.getElementById('amount').addEventListener('input', function () {
+    this.value = this.value.replace(/\D/g, '');
+  });
+
+  document.getElementById('pan').addEventListener('input', function () {
+    this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10);
+  });
+
+  form.querySelectorAll('input[name="gender"]').forEach((el) => {
+    el.addEventListener('change', () => validateField('gender'));
+  });
+
+  function showBanner(type, message) {
+    banner.className = 'form-banner show ' + type;
+    if (type === 'loading') {
+      banner.innerHTML = '<span class="spinner"></span> ' + message;
+    } else if (type === 'error') {
+      banner.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> ' + message;
+    } else {
+      banner.innerHTML = message;
+    }
+  }
+  function hideBanner() {
+    banner.className = 'form-banner';
+    banner.innerHTML = '';
+  }
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    hideBanner();
+
+    const isValid = validateAll();
+    if (!isValid) {
+      showBanner('error', 'Please fix the highlighted fields before submitting.');
+      const firstError = form.querySelector('.has-error, #consentError[style*="flex"]');
+      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    if (AGENT_PORTAL_SCRIPT_URL.indexOf('PASTE_YOUR') === 0) {
+      showBanner('error', 'Agent Portal is not yet connected to Google Sheets. See apps-script/agent-portal-script.gs.');
+      return;
+    }
+
+    const loanType = document.getElementById('loanType').value;
+
+    submitBtn.disabled = true;
+    showBanner('loading', 'Submitting lead…');
+
+    const payload = {
+      action: 'submitLead',
+      agentId: session.agentId,
+      agentName: session.name,
+      loanType: loanType,
+      firstName: document.getElementById('firstName').value.trim(),
+      lastName: document.getElementById('lastName').value.trim(),
+      fatherName: document.getElementById('fatherName').value.trim(),
+      dob: document.getElementById('dob').value,
+      gender: getSelectedGender(),
+      mobile: document.getElementById('mobile').value.trim(),
+      altMobile: document.getElementById('altMobile').value.trim(),
+      pan: document.getElementById('pan').value.trim().toUpperCase(),
+      aadhaar: document.getElementById('aadhaar').value.trim(),
+      requiredAmount: document.getElementById('amount').value.trim(),
+      consent: true,
+    };
+
+    try {
+      await submitToAppsScript(AGENT_PORTAL_SCRIPT_URL, payload);
+      CredBabaAgentPortal.setLeadSubmitted(loanType);
+      CredBabaAgentPortal.goTo('lead-submitted.html');
+    } catch (err) {
+      submitBtn.disabled = false;
+      if (err.reason === 'suspended' || err.reason === 'pending') {
+        CredBabaAgentPortal.goToDisabled(err.reason);
+        return;
+      }
+      // Deliberately don't clear the form here — a transient error
+      // shouldn't cost the agent everything they just typed in.
+      showBanner('error', err.message || 'Something went wrong. Please try again.');
+    }
+  });
+})();

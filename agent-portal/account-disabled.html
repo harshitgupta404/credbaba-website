@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Account Access Disabled — CredBaba Agent Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/forms.css">
+<link rel="stylesheet" href="../assets/css/agent-portal.css">
+</head>
+<body>
+
+<header class="site-header agent-portal-header">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <span class="brand-mark">CB</span>
+      CredBaba
+      <span class="agent-portal-badge">Agent Portal</span>
+    </a>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="form-wrap container" style="padding-top: var(--space-8); max-width: 520px;">
+    <div class="card disabled-panel">
+      <div class="disabled-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      <h1 id="disabledHeading">Account Access Disabled</h1>
+      <p class="text-soft" id="disabledMessage">Your agent access has been disabled. Please contact CredBaba to resolve this.</p>
+      <a href="login.html" class="btn btn-outline">Back to Login</a>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script src="../assets/js/agent-portal-common.js"></script>
+<script src="../assets/js/agent-account-disabled.js"></script>
+</body>
+</html>

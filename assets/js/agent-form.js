@@ -6,6 +6,17 @@
 // for the AGENT LEADS sheet. See /apps-script/README.md for setup steps.
 const AGENT_FORM_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Rtex5VJixTAP84eZ3bd6lo7quZGGlAhmGF5fvveON6vOXCFIeXiw5lqJAOqUo2w1HA/exec';
 
+// Lightweight, client-side-only anti-spam gate for this public form: the
+// code below must match what the visitor types before the form will
+// submit. There is deliberately no server involved — this only stops
+// casual/naive bots that fill in and submit the visible form; it does
+// nothing against a targeted script that POSTs directly to
+// AGENT_FORM_SCRIPT_URL, since that bypasses this file entirely. Rotate
+// this value periodically (random letters/numbers, any length) and
+// redeploy so any scraped/cached code stops working — that's the whole
+// defense here, not any single code being "unguessable".
+const AGENT_SIGNUP_VERIFICATION_CODE = 'K7QX2M';
+
 (function () {
   const form = document.getElementById('agentForm');
   const submitBtn = document.getElementById('submitBtn');
@@ -13,6 +24,9 @@ const AGENT_FORM_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Rtex5V
   const formCard = document.getElementById('formCard');
   const successPanel = document.getElementById('successPanel');
   const V = CredBabaValidators;
+
+  const verifyCodeDisplay = document.getElementById('verifyCodeDisplay');
+  if (verifyCodeDisplay) verifyCodeDisplay.textContent = AGENT_SIGNUP_VERIFICATION_CODE;
 
   function setFieldState(fieldId, result) {
     const field = document.getElementById(fieldId);
@@ -51,13 +65,23 @@ const AGENT_FORM_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Rtex5V
         return setFieldState('f-altMobile', V.validateMobile(document.getElementById('altMobile').value, { optional: true, label: 'Alternate number' }));
       case 'pincode':
         return setFieldState('f-pincode', V.validatePincode(document.getElementById('pincode').value));
+      case 'verifyCode':
+        return validateVerifyCode();
       default:
         return true;
     }
   }
 
+  function validateVerifyCode() {
+    const entered = document.getElementById('verifyCode').value.trim().toUpperCase();
+    const result = entered === AGENT_SIGNUP_VERIFICATION_CODE
+      ? { valid: true, message: '' }
+      : { valid: false, message: 'That code doesn\'t match. Please check and try again.' };
+    return setFieldState('f-verifyCode', result);
+  }
+
   function validateAll() {
-    const fields = ['firstName', 'lastName', 'dob', 'gender', 'mobile', 'altMobile', 'pincode'];
+    const fields = ['firstName', 'lastName', 'dob', 'gender', 'mobile', 'altMobile', 'pincode', 'verifyCode'];
     let allValid = true;
     fields.forEach((f) => { if (!validateField(f)) allValid = false; });
 
@@ -91,6 +115,11 @@ const AGENT_FORM_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Rtex5V
   document.getElementById('pincode').addEventListener('input', function () {
     this.value = this.value.replace(/\D/g, '').slice(0, 6);
   });
+
+  document.getElementById('verifyCode').addEventListener('input', function () {
+    this.value = this.value.toUpperCase();
+  });
+  document.getElementById('verifyCode').addEventListener('blur', () => validateVerifyCode());
 
   form.querySelectorAll('input[name="gender"]').forEach((el) => {
     el.addEventListener('change', () => validateField('gender'));

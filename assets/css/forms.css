@@ -77,6 +77,7 @@
 .field input[type="tel"],
 .field input[type="date"],
 .field input[type="number"],
+.field input[type="password"],
 .field select {
   width: 100%;
   padding: 0.75rem 0.9rem;
@@ -166,6 +167,20 @@
   outline: 2px solid var(--color-indigo);
   outline-offset: 2px;
 }
+
+/* Verification code display (client-side-only anti-spam on public signup
+   forms — see assets/js/agent-form.js for how the code itself works) */
+.verify-code-display {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: var(--color-surface);
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: var(--color-indigo);
+}
+[data-theme="dark"] .verify-code-display { color: var(--color-gold-bright); }
 
 /* Consent checkbox */
 .consent-row {

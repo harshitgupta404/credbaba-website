@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Agent Login — CredBaba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/forms.css">
+<link rel="stylesheet" href="../assets/css/agent-portal.css">
+</head>
+<body>
+
+<header class="site-header agent-portal-header">
+  <div class="container">
+    <a href="../index.html" class="brand">
+      <span class="brand-mark">CB</span>
+      CredBaba
+      <span class="agent-portal-badge">Agent Portal</span>
+    </a>
+    <div class="header-actions">
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="login-wrap container">
+    <div class="form-banner" id="formBanner" role="status"></div>
+    <div class="card">
+      <h1>Agent Login</h1>
+      <p class="lede">Log in to submit leads tagged to your agent account.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field" id="f-agentId">
+          <label for="agentId">Agent ID <span class="req">*</span></label>
+          <input type="text" id="agentId" name="agentId" autocomplete="username" placeholder="AG-0001" class="mono-input" style="text-transform: uppercase;">
+          <div class="field-error"></div>
+        </div>
+
+        <div class="field" id="f-password">
+          <label for="password">Password <span class="req">*</span></label>
+          <input type="password" id="password" name="password" autocomplete="current-password" placeholder="••••••••">
+          <div class="field-error"></div>
+        </div>
+
+        <div class="form-submit-row">
+          <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Log In</button>
+        </div>
+      </form>
+
+      <p class="form-note">Not an agent yet? <a href="../pages/agent.html">Apply here</a>.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script src="../assets/js/form-submit.js"></script>
+<script src="../assets/js/agent-portal-common.js"></script>
+<script src="../assets/js/agent-portal-login.js"></script>
+</body>
+</html>
