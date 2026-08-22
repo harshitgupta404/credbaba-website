@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog | CredBaba</title>
+<meta name="description" content="Loan guides, tips, and insights from CredBaba. Learn about home loans, personal loans, business loans, and how to navigate the borrowing process in India.">
+<link rel="canonical" href="https://credbaba.com/blog/" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234338CA%22/><text x=%2250%22 y=%2266%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23C9A227%22 font-family=%22monospace%22>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<style>
+  .blog-hero { padding: var(--space-9) 0 var(--space-7); }
+  .blog-hero h1 { font-size: var(--text-4xl); margin-bottom: var(--space-3); }
+  .blog-hero p { color: var(--color-ink-soft); font-size: var(--text-lg); max-width: 600px; }
+  .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-6); padding-bottom: var(--space-12); }
+  .blog-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-7); display: flex; flex-direction: column; transition: box-shadow 0.2s ease, transform 0.2s ease; }
+  .blog-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); }
+  .blog-card-tag { display: inline-block; font-size: var(--text-xs); font-family: var(--font-head); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-indigo); margin-bottom: var(--space-3); }
+  .blog-card h2 { font-size: var(--text-xl); line-height: 1.3; margin-bottom: var(--space-3); }
+  .blog-card p { color: var(--color-ink-soft); font-size: var(--text-sm); line-height: 1.65; flex: 1; margin-bottom: var(--space-5); }
+  .blog-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+  .blog-card-meta { font-size: var(--text-xs); color: var(--color-ink-faint); }
+  .blog-read-link { font-size: var(--text-sm); font-family: var(--font-head); font-weight: 600; color: var(--color-indigo); text-decoration: none; display: flex; align-items: center; gap: var(--space-1); }
+  .blog-read-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="brand"><span class="brand-mark">CB</span>CredBaba</a>
+    <nav class="nav-desktop">
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../home-loan/">Home Loan</a>
+        <a href="../personal-loan/">Personal Loan</a>
+        <a href="../business-loan/">Business Loan</a>
+        <a href="index.html" class="active">Blog</a>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <a href="../business-loan/" class="btn btn-primary header-cta">Apply Now</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.html">Home</a>
+    <a href="../home-loan/">Home Loan</a>
+    <a href="../personal-loan/">Personal Loan</a>
+    <a href="../business-loan/">Business Loan</a>
+    <a href="index.html">Blog</a>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="blog-hero">
+    <div class="eyebrow">CredBaba Blog</div>
+    <h1>Loan Guides &amp; Insights</h1>
+    <p>Practical information to help you understand loans, compare options, and make more informed borrowing decisions.</p>
+  </div>
+
+  <div class="blog-grid">
+
+    <div class="blog-card">
+      <span class="blog-card-tag">Home Loans</span>
+      <h2>Best Home Loan Options in India 2026: Compare Rates, Tenure &amp; Benefits</h2>
+      <p>Compare interest rates, tenure, and features from SBI, HDFC, ICICI, Axis, Kotak, PNB, and LIC Housing Finance. Everything you need to choose the right home loan in 2026.</p>
+      <div class="blog-card-footer">
+        <span class="blog-card-meta">August 2026 &nbsp;·&nbsp; 8 min read</span>
+        <a href="best-home-loan-options-india-interest-rates-tenure.html" class="blog-read-link">Read →</a>
+      </div>
+    </div>
+
+    <div class="blog-card">
+      <span class="blog-card-tag">Loan Guide</span>
+      <h2>How to Apply for a Loan Online in India (2026): A Complete Guide</h2>
+      <p>A step-by-step guide to applying for a Personal, Business, or Home Loan online in India. Covers eligibility, documents, tips for quick approval, and what to check before you sign.</p>
+      <div class="blog-card-footer">
+        <span class="blog-card-meta">August 2026 &nbsp;·&nbsp; 7 min read</span>
+        <a href="how-to-apply-for-loan-online-india.html" class="blog-read-link">Read →</a>
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>© 2026 CredBaba. All rights reserved.</span>
+      <span><a href="../pages/loans.html">Explore Loans</a> · <a href="../pages/faq.html">FAQs</a> · <a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function () {
+    var menu = document.getElementById('mobileMenu');
+    var open = menu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
+</body>
+</html>
