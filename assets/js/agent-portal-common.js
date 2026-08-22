@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Agent Portal shared helpers
+// CredBaba: Agent Portal shared helpers
 // Session storage, guards, and small utilities shared by every page under
 // /agent-portal/. sessionStorage is used deliberately (not localStorage):
 // per product decision, an agent's login should not persist once the
@@ -68,12 +68,12 @@ const CredBabaAgentPortal = (function () {
 
   // Single choke point for every same-portal redirect this app performs
   // (after the initial <head> guards, which run before this file has even
-  // loaded — see the "before paint" comment in leads.html/lead-submitted.html).
+  // loaded; see the "before paint" comment in leads.html/lead-submitted.html).
   // Routing all of them through one function, rather than scattering
   // window.location.replace(...) calls across every page's script, keeps
   // navigation logic in one place if it ever needs to change. Called as
   // CredBabaAgentPortal.goTo(...) everywhere, including from inside this
-  // same module (below), rather than as a bare local reference — so it's
+  // same module (below), rather than as a bare local reference, so it's
   // one real, single choke point rather than two copies of the same idea.
   function goTo(url) {
     window.location.replace(url);

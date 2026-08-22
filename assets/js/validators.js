@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Validation utilities
+// CredBaba: Validation utilities
 // Implements every validation rule from the PRD. Shared by both forms.
 // Each validator returns { valid: boolean, message: string }
 // ==========================================================================

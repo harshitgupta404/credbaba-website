@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CredBaba — Agent Portal styles
+   CredBaba: Agent Portal styles
    Internal tool: reuses tokens.css / site.css / forms.css for consistency,
    this file only adds what's specific to the portal (session bar, the
    change-password panel, and the disabled-account state).

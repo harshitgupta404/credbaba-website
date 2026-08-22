@@ -1,5 +1,5 @@
 /* ==========================================================================
-   CredBaba — Form styles
+   CredBaba: Form styles
    ========================================================================== */
 
 .form-page-header {
@@ -169,7 +169,7 @@
 }
 
 /* Verification code display (client-side-only anti-spam on public signup
-   forms — see assets/js/agent-form.js for how the code itself works) */
+   forms; see assets/js/agent-form.js for how the code itself works) */
 .verify-code-display {
   display: inline-block;
   padding: 0.2rem 0.6rem;

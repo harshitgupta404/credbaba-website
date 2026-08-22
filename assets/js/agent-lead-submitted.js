@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Agent Portal "Lead Submitted" page logic
+// CredBaba: Agent Portal "Lead Submitted" page logic
 // Mirrors the guard pattern used by the public loan-thank-you.js: this page
 // must only ever be reachable right after a real submission, never by
 // someone landing on the URL directly. A missing session sends them to

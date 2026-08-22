@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore Loan Options | Personal, Business &amp; Home Loans | CredBaba</title>
+<meta name="description" content="Compare Personal, Business, and Home Loan options available through CredBaba. Understand what each loan type covers and start your application online.">
+<link rel="canonical" href="https://credbaba.com/pages/loans.html" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234338CA%22/><text x=%2250%22 y=%2266%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23C9A227%22 font-family=%22monospace%22>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<style>
+  .loans-hero { padding: var(--space-9) 0 var(--space-7); }
+  .loans-hero h1 { font-size: var(--text-4xl); margin-bottom: var(--space-4); }
+  .loans-hero p { color: var(--color-ink-soft); font-size: var(--text-lg); max-width: 640px; }
+  .loan-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-7); margin-bottom: var(--space-6); }
+  .loan-card-header { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); }
+  .loan-card-icon { width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--color-indigo); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .loan-card-icon svg { width: 24px; height: 24px; stroke: white; }
+  .loan-card h2 { font-size: var(--text-2xl); margin: 0; }
+  .loan-card p { color: var(--color-ink-soft); margin-bottom: var(--space-5); }
+  .loan-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3); margin-bottom: var(--space-6); }
+  .loan-feature { display: flex; align-items: flex-start; gap: var(--space-2); font-size: var(--text-sm); color: var(--color-ink-soft); }
+  .loan-feature svg { width: 16px; height: 16px; stroke: var(--color-indigo); flex-shrink: 0; margin-top: 2px; }
+  .disclaimer-note { color: var(--color-ink-faint); font-size: var(--text-sm); margin-top: var(--space-9); padding-top: var(--space-6); border-top: 1px solid var(--color-border); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="brand"><span class="brand-mark">CB</span>CredBaba</a>
+    <nav class="nav-desktop">
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../home-loan/">Home Loan</a>
+        <a href="../personal-loan/">Personal Loan</a>
+        <a href="../business-loan/">Business Loan</a>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <a href="../business-loan/" class="btn btn-primary header-cta">Apply Now</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.html">Home</a>
+    <a href="../home-loan/">Home Loan</a>
+    <a href="../personal-loan/">Personal Loan</a>
+    <a href="../business-loan/">Business Loan</a>
+  </div>
+</header>
+
+<main class="container">
+
+  <div class="loans-hero">
+    <div class="eyebrow">Loan Options</div>
+    <h1>Explore Loans Available Through CredBaba</h1>
+    <p>CredBaba is a loan facilitation platform that helps you explore Personal, Business, and Home Loan options online. Submit one application and our team will connect you with relevant lending partners based on your profile and requirements.</p>
+  </div>
+
+  <!-- Personal Loan -->
+  <div class="loan-card">
+    <div class="loan-card-header">
+      <div class="loan-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h2>Personal Loan</h2>
+    </div>
+    <p>A Personal Loan can help you meet a range of individual financial needs, from medical expenses and travel to education or home improvement. Eligibility and loan terms are determined by the lending partner based on your income, credit profile, and repayment capacity.</p>
+    <div class="loan-features">
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Apply online in minutes
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        No collateral required
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Flexible repayment tenure
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Guided through the process
+      </div>
+    </div>
+    <a href="../personal-loan/" class="btn btn-primary">Apply for a Personal Loan</a>
+  </div>
+
+  <!-- Business Loan -->
+  <div class="loan-card">
+    <div class="loan-card-header">
+      <div class="loan-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+      </div>
+      <h2>Business Loan</h2>
+    </div>
+    <p>A Business Loan can support working capital needs, business expansion, equipment purchase, or other commercial requirements. Eligibility depends on your business profile, financials, and the lending partner's criteria.</p>
+    <div class="loan-features">
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Suitable for small and growing businesses
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Simple online application
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Connected to relevant lenders
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Guided assistance throughout
+      </div>
+    </div>
+    <a href="../business-loan/" class="btn btn-primary">Apply for a Business Loan</a>
+  </div>
+
+  <!-- Home Loan -->
+  <div class="loan-card">
+    <div class="loan-card-header">
+      <div class="loan-card-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <h2>Home Loan</h2>
+    </div>
+    <p>A Home Loan can help you purchase, construct, or renovate a property. Eligibility typically depends on your income, credit profile, property details, loan amount, and the lending partner's policies.</p>
+    <div class="loan-features">
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        For purchase, construction, or renovation
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Longer repayment tenures available
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Simple and secure online process
+      </div>
+      <div class="loan-feature">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        Matched with suitable lending partners
+      </div>
+    </div>
+    <a href="../home-loan/" class="btn btn-primary">Apply for a Home Loan</a>
+  </div>
+
+  <p class="disclaimer-note">CredBaba is a loan facilitation platform (DSA) and does not itself lend money. Loan approval, interest rates, loan amount, tenure, fees, and all other terms are determined solely by the respective lending partner based on its eligibility criteria and applicable regulations. CredBaba does not guarantee loan approval.</p>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>&#169; 2026 CredBaba. All rights reserved.</span>
+      <span><a href="agent.html">Become an Agent</a> · <a href="faq.html">FAQs</a> · <a href="terms.html">Terms of Service</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function () {
+    var menu = document.getElementById('mobileMenu');
+    var open = menu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Loan Thank You page logic
+// CredBaba: Loan Thank You page logic
 // This page must only ever be reachable as the result of a successful loan
 // application submission (see apply-form.js), never by someone landing on
 // the URL directly (shared link, bookmark, search result, etc.). We enforce
@@ -50,5 +50,5 @@
   if (message) {
     message.textContent = 'Our representative will review your details and get in touch with you shortly. We appreciate your interest and look forward to assisting you.';
   }
-  document.title = 'Thank You — CredBaba';
+  document.title = 'Thank You | CredBaba';
 })();

@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Loan application form logic (shared by the dedicated
+// CredBaba: Loan application form logic (shared by the dedicated
 // Home Loan / Personal Loan / Business Loan pages)
 //
 // Each loan page's <form> declares its fixed loan type via a

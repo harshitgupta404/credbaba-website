@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Agent Signup form logic
+// CredBaba: Agent Signup form logic
 // ==========================================================================
 
 // IMPORTANT: Replace this with your deployed Google Apps Script Web App URL
@@ -8,12 +8,12 @@ const AGENT_FORM_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby-Rtex5V
 
 // Lightweight, client-side-only anti-spam gate for this public form: the
 // code below must match what the visitor types before the form will
-// submit. There is deliberately no server involved — this only stops
+// submit. There is deliberately no server involved; this only stops
 // casual/naive bots that fill in and submit the visible form; it does
 // nothing against a targeted script that POSTs directly to
 // AGENT_FORM_SCRIPT_URL, since that bypasses this file entirely. Rotate
 // this value periodically (random letters/numbers, any length) and
-// redeploy so any scraped/cached code stops working — that's the whole
+// redeploy so any scraped/cached code stops working; that's the whole
 // defense here, not any single code being "unguessable".
 const AGENT_SIGNUP_VERIFICATION_CODE = 'K7QX2M';
 

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frequently Asked Questions | CredBaba</title>
+<meta name="description" content="Find answers to common questions about applying for loans through CredBaba, eligibility, approval, and more.">
+<link rel="canonical" href="https://credbaba.com/pages/faq.html" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234338CA%22/><text x=%2250%22 y=%2266%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23C9A227%22 font-family=%22monospace%22>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<style>
+  .faq-wrap { max-width: 760px; margin: 0 auto; padding: var(--space-9) 0 var(--space-10); }
+  .faq-wrap h1 { font-size: var(--text-4xl); margin-bottom: var(--space-3); }
+  .faq-intro { color: var(--color-ink-soft); font-size: var(--text-lg); margin-bottom: var(--space-8); }
+  .faq-item { border-bottom: 1px solid var(--color-border); }
+  .faq-item:first-of-type { border-top: 1px solid var(--color-border); }
+  .faq-question { width: 100%; background: none; border: none; text-align: left; padding: var(--space-5) 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--color-ink); font-family: var(--font-head); font-size: var(--text-base); font-weight: 600; line-height: 1.4; }
+  .faq-question:hover { color: var(--color-indigo); }
+  .faq-icon { flex-shrink: 0; width: 20px; height: 20px; transition: transform 0.2s ease; }
+  .faq-item.open .faq-icon { transform: rotate(45deg); }
+  .faq-answer { display: none; padding-bottom: var(--space-5); color: var(--color-ink-soft); line-height: 1.7; }
+  .faq-item.open .faq-answer { display: block; }
+  .faq-cta { margin-top: var(--space-9); padding: var(--space-7); background: var(--color-surface); border-radius: var(--radius-lg); text-align: center; }
+  .faq-cta h2 { font-size: var(--text-2xl); margin-bottom: var(--space-3); }
+  .faq-cta p { color: var(--color-ink-soft); margin-bottom: var(--space-5); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <a href="../index.html" class="brand"><span class="brand-mark">CB</span>CredBaba</a>
+    <nav class="nav-desktop">
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../home-loan/">Home Loan</a>
+        <a href="../personal-loan/">Personal Loan</a>
+        <a href="../business-loan/">Business Loan</a>
+      </div>
+    </nav>
+    <div class="header-actions">
+      <a href="../business-loan/" class="btn btn-primary header-cta">Apply Now</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="../index.html">Home</a>
+    <a href="../home-loan/">Home Loan</a>
+    <a href="../personal-loan/">Personal Loan</a>
+    <a href="../business-loan/">Business Loan</a>
+  </div>
+</header>
+
+<main class="container">
+  <div class="faq-wrap">
+
+    <div class="eyebrow">Support</div>
+    <h1>Frequently Asked Questions</h1>
+    <p class="faq-intro">Everything you need to know about applying for a loan through CredBaba.</p>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        What types of loans can I apply for through CredBaba?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        CredBaba helps users explore Personal Loans, Business Loans, and Home Loans through a simple online application process. Based on your requirements and profile, you may be connected with relevant lending partners. Final loan approval and terms are subject to the respective lender's eligibility criteria.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        Can I apply for a loan online through CredBaba?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Yes. You can apply for a loan online by submitting your basic details and loan requirements through the CredBaba application form. The information is reviewed as part of the application process, after which eligible applicants may be connected with relevant lending partners.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        What factors affect my loan eligibility?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Loan eligibility can depend on factors such as income, credit history, employment or business profile, existing financial obligations, loan amount, repayment capacity, and the lender's policies. Each lending partner may have different eligibility requirements.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        Can I apply for a Personal Loan online?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Yes. You can begin a Personal Loan application online through CredBaba. Your requirements and profile may be assessed to identify relevant lending options. The final loan amount, interest rate, tenure, and approval are determined by the respective lender.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        Can I apply for a Business Loan through CredBaba?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Yes. CredBaba allows businesses and entrepreneurs to begin exploring Business Loan options online. Depending on your business profile, financial information, requirements, and lender criteria, eligible applicants may be connected with suitable lending partners.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        Can I apply for a Home Loan online?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Yes. You can start exploring Home Loan options online through CredBaba. Home loan eligibility and terms can depend on factors such as income, credit profile, property details, loan amount, repayment capacity, and the lending partner's policies.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        What should I check before accepting a loan offer?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        Before accepting a loan, review the interest rate, EMI, repayment tenure, processing fees, other applicable charges, and total repayment amount. Understanding the complete cost of borrowing can help you make a more informed decision.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question" aria-expanded="false">
+        Does CredBaba guarantee loan approval?
+        <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </button>
+      <div class="faq-answer">
+        No. CredBaba does not guarantee loan approval. Loan approval, interest rates, loan amount, tenure, fees, and other terms are determined by the respective lending partner based on its eligibility criteria, assessment, policies, and applicable regulations.
+      </div>
+    </div>
+
+    <div class="faq-cta">
+      <h2>Ready to get started?</h2>
+      <p>Apply online in minutes. No login required, no documents to upload today.</p>
+      <a href="../business-loan/" class="btn btn-primary">Apply for a Loan Online</a>
+    </div>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="ledger-line"></div>
+    <div class="footer-bottom">
+      <span>&#169; 2026 CredBaba. All rights reserved.</span>
+      <span><a href="loans.html">Explore Loan Options</a> · <a href="agent.html">Become an Agent</a> · <a href="terms.html">Terms of Service</a></span>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/theme.js"></script>
+<script>
+  document.getElementById('navToggle').addEventListener('click', function () {
+    var menu = document.getElementById('mobileMenu');
+    var open = menu.classList.toggle('open');
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
+<script>
+  document.querySelectorAll('.faq-question').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var item = this.closest('.faq-item');
+      var isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(function(el) {
+        el.classList.remove('open');
+        el.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+      });
+      if (!isOpen) {
+        item.classList.add('open');
+        this.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Agent Portal login logic
+// CredBaba: Agent Portal login logic
 // ==========================================================================
 
 // IMPORTANT: Replace this with your deployed Google Apps Script Web App URL
@@ -87,7 +87,7 @@ const AGENT_PORTAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9NXHd
         CredBabaAgentPortal.goToDisabled(err.reason);
         return;
       }
-      // 'locked' and 'invalid' both stay inline — a lockout is temporary,
+      // 'locked' and 'invalid' both stay inline; a lockout is temporary,
       // not the same as a disabled account, and a wrong password is just
       // a wrong password.
       showBanner('error', err.message || 'Something went wrong. Please try again.');

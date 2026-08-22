@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Form submission helper
+// CredBaba: Form submission helper
 // Posts to a Google Apps Script Web App URL. Apps Script Web Apps deployed
 // as "Anyone" access don't support custom CORS reading of the response in
 // all cases, so we use a no-cors-safe pattern: send as
@@ -23,7 +23,7 @@ async function submitToAppsScript(scriptUrl, payload) {
   if (data && data.result === 'error') {
     const err = new Error(data.message || 'Submission failed. Please try again.');
     // Some callers (e.g. the Agent Portal) need to distinguish *why* a
-    // request failed — a suspended account should route somewhere
+    // request failed; a suspended account should route somewhere
     // different than a plain wrong-password message. Optional and unused
     // by existing callers, so this is backward-compatible.
     if (data.reason) err.reason = data.reason;

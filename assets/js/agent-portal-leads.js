@@ -1,5 +1,5 @@
 // ==========================================================================
-// CredBaba — Agent Portal lead-entry logic
+// CredBaba: Agent Portal lead-entry logic
 // Reuses the same CredBabaValidators used by the public loan pages, plus a
 // loan-type dropdown (this internal tool doesn't need the SEO-driven
 // three-separate-pages split the public site uses).
@@ -264,7 +264,7 @@ const AGENT_PORTAL_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9NXHd
         CredBabaAgentPortal.goToDisabled(err.reason);
         return;
       }
-      // Deliberately don't clear the form here — a transient error
+      // Deliberately don't clear the form here; a transient error
       // shouldn't cost the agent everything they just typed in.
       showBanner('error', err.message || 'Something went wrong. Please try again.');
     }
