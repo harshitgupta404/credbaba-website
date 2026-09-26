@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+  (function(){
+    var t = localStorage.getItem('credbaba-theme');
+    if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Backoffice Login | CredBaba</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%234338CA%22/><text x=%2250%22 y=%2266%22 font-size=%2250%22 text-anchor=%22middle%22 fill=%22%23C9A227%22 font-family=%22monospace%22>C</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/tokens.css">
+<link rel="stylesheet" href="../assets/css/site.css">
+<link rel="stylesheet" href="../assets/css/backoffice.css">
+<style>
+  .password-wrap { position: relative; }
+  .password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-ink-faint); cursor: pointer; display: flex; }
+  .password-toggle:hover { color: var(--color-ink); }
+  .login-error { display: none; background: var(--color-error-soft); color: var(--color-error); border: 1px solid var(--color-error); padding: 10px 14px; border-radius: var(--radius-md); font-size: var(--text-xs); margin-bottom: var(--space-4); line-height: 1.5; }
+  .login-lockout { display: none; background: var(--color-gold-soft); color: var(--color-gold); border: 1px solid var(--color-gold); padding: 12px 14px; border-radius: var(--radius-md); font-size: var(--text-xs); margin-bottom: var(--space-4); font-family: var(--font-mono); }
+  .hint-box { font-size: 11px; color: var(--color-ink-faint); background: var(--color-surface); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px dashed var(--color-border); margin-top: var(--space-4); text-align: center; }
+</style>
+</head>
+<body class="admin-body">
+
+<div class="admin-login-wrap">
+  <div class="admin-login-card">
+    <div class="admin-login-head">
+      <a href="../index.html" class="brand">
+        <span class="brand-mark">CB</span>
+        CredBaba
+      </a>
+      <h1>Backoffice Console</h1>
+      <p>backoffice.credbaba.com &nbsp;·&nbsp; Authorized Personnel Only</p>
+      <div class="security-badge">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Isolated Host · End-to-End Encrypted Session
+      </div>
+    </div>
+
+    <div id="lockoutBanner" class="login-lockout"></div>
+    <div id="errorBanner" class="login-error"></div>
+
+    <form id="loginForm" autocomplete="off">
+      <div class="form-field">
+        <label for="adminUsername" class="form-label">User ID / Username</label>
+        <input type="text" id="adminUsername" class="form-input" placeholder="Enter username" required autofocus autocomplete="username" />
+      </div>
+
+      <div class="form-field">
+        <label for="adminPassword" class="form-label">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" required autocomplete="current-password" />
+          <button type="button" class="password-toggle" id="togglePassword" aria-label="Toggle password visibility">
+            <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; margin-top: var(--space-4);">Sign In to Backoffice →</button>
+    </form>
+
+    <div class="hint-box">
+      Default Admin: <code>admin</code> / <code>Admin@CredBaba2026#Secure</code><br>
+      <span style="font-size: 10px; opacity: 0.85;">(Additional users can be provisioned in Backoffice Users)</span>
+    </div>
+  </div>
+</div>
+
+<script src="../assets/js/theme.js"></script>
+<script src="../assets/js/backoffice-auth.js"></script>
+<script>
+  (function () {
+    if (CredBabaBackofficeAuth.getSession()) {
+      window.location.replace('blogs.html');
+      return;
+    }
+
+    const form = document.getElementById('loginForm');
+    const userField = document.getElementById('adminUsername');
+    const passField = document.getElementById('adminPassword');
+    const submitBtn = document.getElementById('submitBtn');
+    const errorBanner = document.getElementById('errorBanner');
+    const lockoutBanner = document.getElementById('lockoutBanner');
+    const togglePassBtn = document.getElementById('togglePassword');
+    const eyeIcon = document.getElementById('eyeIcon');
+
+    togglePassBtn.addEventListener('click', function () {
+      const type = passField.getAttribute('type') === 'password' ? 'text' : 'password';
+      passField.setAttribute('type', type);
+      eyeIcon.innerHTML = type === 'password'
+        ? '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'
+        : '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"/>';
+    });
+
+    function checkLockout() {
+      const remainingMs = CredBabaBackofficeAuth.getRemainingLockoutMs();
+      if (remainingMs > 0) {
+        const mins = Math.ceil(remainingMs / 60000);
+        lockoutBanner.style.display = 'block';
+        lockoutBanner.innerHTML = `⚠️ Console locked for security. Try again in ${mins} minute(s).`;
+        submitBtn.disabled = true;
+        return true;
+      } else {
+        lockoutBanner.style.display = 'none';
+        submitBtn.disabled = false;
+        return false;
+      }
+    }
+
+    checkLockout();
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      errorBanner.style.display = 'none';
+
+      if (checkLockout()) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Authenticating...';
+
+      const res = await CredBabaBackofficeAuth.login(userField.value, passField.value);
+
+      if (res.success) {
+        submitBtn.textContent = 'Success. Opening backoffice...';
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirect = urlParams.get('redirect') || 'blogs.html';
+        window.location.replace(redirect);
+      } else {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In to Backoffice →';
+        if (res.reason === 'LOCKED') {
+          checkLockout();
+        } else {
+          errorBanner.style.display = 'block';
+          errorBanner.textContent = res.message;
+        }
+      }
+    });
+  })();
+</script>
+</body>
+</html>

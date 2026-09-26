@@ -125,12 +125,48 @@
 </footer>
 
 <script src="../assets/js/theme.js"></script>
+<script src="../assets/js/blog-store.js"></script>
 <script>
   document.getElementById('navToggle').addEventListener('click', function () {
     var menu = document.getElementById('mobileMenu');
     var open = menu.classList.toggle('open');
     this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
+
+  // Render any new articles published from the Admin Panel
+  (function () {
+    var grid = document.querySelector('.blog-grid');
+    if (!grid || typeof CredBabaBlogStore === 'undefined') return;
+
+    var existingHrefs = new Set();
+    grid.querySelectorAll('.blog-read-link').forEach(function (a) {
+      existingHrefs.add(a.getAttribute('href'));
+    });
+
+    var published = CredBabaBlogStore.getPublishedBlogs();
+    published.forEach(function (blog) {
+      var targetUrl = blog.url || ('post.html?slug=' + encodeURIComponent(blog.slug));
+      if (existingHrefs.has(targetUrl) || existingHrefs.has(blog.slug + '.html')) {
+        return;
+      }
+
+      var formattedDate = blog.publishedAt
+        ? new Date(blog.publishedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : 'Recent';
+
+      var card = document.createElement('div');
+      card.className = 'blog-card';
+      card.innerHTML =
+        '<span class="blog-card-tag">' + CredBabaBlogStore.escapeHtml(blog.category || 'Loan Guide') + '</span>' +
+        '<h2>' + CredBabaBlogStore.escapeHtml(blog.title) + '</h2>' +
+        '<p>' + CredBabaBlogStore.escapeHtml(blog.excerpt || '') + '</p>' +
+        '<div class="blog-card-footer">' +
+          '<span class="blog-card-meta">' + CredBabaBlogStore.escapeHtml(formattedDate) + ' &nbsp;·&nbsp; ' + CredBabaBlogStore.escapeHtml(blog.readTime || '5 min read') + '</span>' +
+          '<a href="' + targetUrl + '" class="blog-read-link">Read →</a>' +
+        '</div>';
+      grid.prepend(card);
+    });
+  })();
 </script>
 </body>
 </html>

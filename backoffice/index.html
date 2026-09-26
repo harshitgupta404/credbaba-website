@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>CredBaba Backoffice</title>
+<script src="../assets/js/backoffice-auth.js"></script>
+<script>
+  if (CredBabaBackofficeAuth.getSession()) {
+    window.location.replace('blogs.html');
+  } else {
+    window.location.replace('login.html');
+  }
+</script>
+</head>
+<body>
+</body>
+</html>

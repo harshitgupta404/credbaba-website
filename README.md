@@ -22,6 +22,17 @@ credbaba/
 │   ├── agent.html              Agent signup form (public "become an agent" interest form)
 │   ├── privacy.html            Privacy Policy (placeholder legal copy)
 │   └── terms.html              Terms of Service (placeholder legal copy)
+├── backoffice/                Internal Backoffice Console (backoffice.credbaba.com, noindex)
+│   ├── index.html              Session router → blogs.html or login.html
+│   ├── login.html              Secure login screen with SHA-256 salted hashing & brute-force lockout
+│   ├── blogs.html              Blog management table, search, category filters & metrics
+│   ├── editor.html             Rich blog editor with image upload, formatting, FAQ builder & publishing
+│   ├── users.html              Admin and marketing team users management (roles & permissions)
+│   └── settings.html           Password management, cloud sync (Apps Script), JSON backup
+├── blog/
+│   ├── index.html              Public Blog directory with dynamic backoffice sync
+│   ├── post.html               Dynamic article reader for newly published backoffice blogs
+│   └── *.html                  SEO static articles
 ├── agent-portal/                Internal, login-gated tool for approved agents (noindex, not part of public nav)
 │   ├── login.html               Agent ID + password login
 │   ├── leads.html               Lead-entry form (loan-type dropdown) + change password, guarded by session
@@ -32,11 +43,14 @@ credbaba/
 │   │   ├── tokens.css          Design tokens: colors, type, spacing
 │   │   ├── site.css            Header, footer, hero, sections
 │   │   ├── forms.css           Form field & validation styling
+│   │   ├── backoffice.css      Backoffice console styling, metrics, rich editor & modals
 │   │   └── agent-portal.css    Session bar, change-password panel, disabled-account state
 │   └── js/
 │       ├── theme.js            Light/dark mode toggle
 │       ├── validators.js       All PRD validation rules, shared by every form
 │       ├── form-submit.js       Shared Apps Script POST helper
+│       ├── backoffice-auth.js  Backoffice auth, multi-user crypto, session & domain isolation guards
+│       ├── blog-store.js       Blog storage, image compressor & static HTML export generator
 │       ├── loan-form.js        Shared logic for all 3 loan pages (reads loan type from a data attribute)
 │       ├── agent-form.js       Agent form wiring (validation + submit)
 │       ├── loan-thank-you.js   Renders/guards the loan Thank You page
@@ -48,11 +62,11 @@ credbaba/
 ├── apps-script/
 │   ├── loan-leads-script.gs    Google Apps Script for loan leads sheet
 │   ├── agent-leads-script.gs   Google Apps Script for agent leads sheet
+│   ├── blog-script.gs          Optional Google Apps Script for cloud blog synchronization
 │   ├── agent-portal-script.gs  Google Apps Script for Agent Portal login/lead-tagging/password-change
 │   └── README.md               Step-by-step Sheets + Apps Script setup, incl. Agent Portal
-├── agent-portal-plan.md        Design rationale for the Agent Portal (problem, architecture, trade-offs)
-├── sitemap.xml                 Lists homepage, 3 loan pages, agent, privacy, terms (Agent Portal excluded — noindex)
-├── robots.txt                  Allows crawling, points to sitemap.xml, disallows Agent Portal
+├── sitemap.xml                 Lists homepage, 3 loan pages, agent, privacy, terms (Admin & Agent Portal excluded)
+├── robots.txt                  Allows crawling, points to sitemap.xml, disallows /admin/ and /agent-portal/
 ├── CNAME                       GitHub Pages custom domain config (credbaba.com)
 ├── CHANGELOG.md                Dated log of every site change
 └── .nojekyll                   Tells GitHub Pages not to run Jekyll processing

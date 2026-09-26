@@ -5,6 +5,33 @@ Each entry is dated and grouped as **Added** / **Changed** / **Removed** /
 **Fixed**. When you make a change to the site — yourself or via Claude —
 add an entry here so the history stays easy to track.
 
+## 2026-09-26 — Dedicated Backoffice (`backoffice.credbaba.com`) & Blog CMS
+
+Requested by the marketing & leadership team: an isolated backoffice environment strictly bound to `backoffice.credbaba.com` to prevent regular visitors on `credbaba.com` from ever stumbling upon admin or marketing tools. Features multi-user administration, rich blog creation, image compression, live site sync, and brute-force protection.
+
+### Added
+- `backoffice/login.html` — secure backoffice login screen with SHA-256 salted password hashing, password visibility toggle, brute-force lockout (5 attempts / 15-minute lock), and theme toggle.
+- `backoffice/index.html` — instant session router redirecting to `blogs.html` if authenticated, or `login.html`.
+- `backoffice/blogs.html` — full blog management console with overview statistics (Total, Live, Drafts, Categories), live keyword/slug search, category filtering, status filtering, and actions for Edit, Live Preview, Export Static HTML, and Delete.
+- `backoffice/editor.html` — full-featured rich article editor with:
+  - Formatting toolbar: Bold, Italic, Underline, Strikethrough, Headings (H2/H3/H4/P), Alignment (Left, Center, Right), Lists (Bullet, Numbered), Indentation & Outdent, Quotes, Dividers.
+  - Media & Image handling: Upload from device (with client-side canvas compression/optimization to WebP/JPEG under 1200px), Paste Web URL, Alt text, Captions, and alignment options (Center full width, Float Left, Float Right).
+  - Special CredBaba design blocks: Summary/Key Takeaways box, Intro callout box, Quote block, Loan Apply CTA banner.
+  - Interactive FAQ Builder: Collapsible FAQ section builder for SEO schema and reader questions.
+  - Metadata drawer: Title, URL slug (auto-slugified with edit toggle), Category, Author, Published Date, Excerpt, Featured Hero Image upload & preview, and SEO Meta Description with character meter.
+  - Action controls: Save as Draft, Publish to Website, 1-Click Download Standalone HTML, and Live Website Preview modal.
+- `backoffice/users.html` — team user management console allowing Super Admins to create and manage backoffice accounts (Content Managers, Marketing Editors, Analysts) with role badges and account suspend/activate/delete actions.
+- `backoffice/settings.html` — credentials management (change password, reset to defaults), optional cloud sync (Google Apps Script Web App URL), and JSON export/import backup utilities.
+- `assets/css/backoffice.css` — cohesive backoffice console styling built strictly on `tokens.css` and `site.css` tokens (Space Grotesk, Inter, IBM Plex Mono, Indigo/Gold palette, dark/light theme support).
+- `assets/js/backoffice-auth.js` — security engine handling SHA-256 salted hashing (`credbaba_secure_salt_2026`), cryptographically generated session tokens, inactivity timeout (60 min), brute-force attempt tracking/lockout, multi-user accounts, and domain isolation guards redirecting non-backoffice production traffic.
+- `assets/js/blog-store.js` — blog persistence and static site generator engine with local persistence, read-time calculation, image compression, standalone static HTML page generation, and export capabilities.
+- `blog/post.html` — dynamic article reader for newly published backoffice blogs, styled with the exact CredBaba blog design system, header, footer, hero image, rich content, interactive FAQs, and backoffice floating quick-edit bar.
+- `apps-script/blog-script.gs` — optional Google Apps Script Web App backend bound to a "CredBaba Blogs" Google Sheet for centralized cloud syncing.
+
+### Changed
+- `blog/index.html` — updated with `blog-store.js` dynamic sync: keeps all existing SEO static blog cards, while automatically prepending any newly published articles created in the backoffice console.
+- `robots.txt` — added `Disallow: /backoffice/`, `Disallow: /admin/`, and `Disallow: /blog/post.html` to protect backoffice routes and dynamic previews from search crawlers.
+
 ## 2026-08-15 — Auto-provisioned agent credentials + signup anti-spam
 
 Follow-up to the Agent Portal launch below: reduces admin work when

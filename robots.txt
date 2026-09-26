@@ -2,5 +2,8 @@ User-agent: *
 Allow: /
 Disallow: /pages/loan-thank-you.html
 Disallow: /agent-portal/
+Disallow: /admin/
+Disallow: /backoffice/
+Disallow: /blog/post.html
 
 Sitemap: https://credbaba.com/sitemap.xml
