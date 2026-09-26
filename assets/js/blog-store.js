@@ -12,7 +12,7 @@ const CredBabaBlogStore = (function () {
   const STORAGE_KEY_SETTINGS = 'credbaba_admin_settings';
 
   // Configured default Apps Script Web App URL (can also be configured via Settings in Backoffice)
-  const DEFAULT_APPS_SCRIPT_URL = '';
+  const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBskDFL3qYvO5Xg0i9FEcsGig9JJ3Zl44bYbmnQBc9q_cF_AyflphJSLBs7rlr077Y/exec';
 
   // Built-in SEO cornerstone blogs
   const BUILTIN_BLOGS = [
