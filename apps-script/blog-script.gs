@@ -1,11 +1,13 @@
 // ==========================================================================
-// CredBaba: Blog Management Google Apps Script (Option 1)
+// CredBaba: Blog & Backoffice Management Google Apps Script (Option 1)
 // Container-bound to a Google Sheet named "CredBaba Blogs"
-// Manages real-time blog publishing, status toggles (draft/published),
-// deletions, and instant website retrieval without any git commits.
+// Manages:
+//   1. Real-time blog publishing, status toggles (draft/published), deletions
+//   2. Multi-user backoffice authentication, roles, and synchronization
 // ==========================================================================
 
-const SHEET_NAME = 'CredBaba Blogs';
+const SHEET_NAME_BLOGS = 'CredBaba Blogs';
+const SHEET_NAME_USERS = 'CredBaba Users';
 
 function doGet(e) {
   return handleRequest(e, 'GET');
@@ -34,45 +36,195 @@ function handleRequest(e, method) {
       return jsonResponse({ result: 'error', message: 'Script is not attached to a spreadsheet. Open from Extensions -> Apps Script inside Google Sheets.' });
     }
 
-    let sheet = ss.getSheetByName(SHEET_NAME);
+    // ========================================================================
+    // USER AUTHENTICATION & MANAGEMENT ACTIONS
+    // ========================================================================
 
-    // If "CredBaba Blogs" doesn't exist, check if Sheet1 can be used/renamed
-    if (!sheet) {
-      const sheets = ss.getSheets();
-      if (sheets.length === 1 && sheets[0].getLastRow() <= 1) {
-        sheet = sheets[0];
-        sheet.setName(SHEET_NAME);
+    // ACTION: authenticate (Verify credentials across any browser/device)
+    if (action === 'authenticate') {
+      const username = (payload.username || params.username || '').toString().trim().toLowerCase();
+      const passHash = (payload.passwordHash || params.passwordHash || '').toString().trim();
+
+      if (!username || !passHash) {
+        return jsonResponse({ result: 'error', reason: 'EMPTY', message: 'Missing username or password hash.' });
+      }
+
+      // Fast check for primary super administrator credentials
+      if ((username === 'admin' || username === 'credbaba_admin') && passHash === 'b99905801b4a6f74bec41a53623d5f9206c158b73a668b418bf01de49fa8a952') {
+        return jsonResponse({
+          result: 'success',
+          user: {
+            username: 'admin',
+            name: 'Primary Administrator',
+            role: 'Super Admin',
+            status: 'active',
+            isPrimary: true
+          }
+        });
+      }
+
+      const uSheet = getUsersSheet(ss);
+      const data = uSheet.getDataRange().getValues();
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        const rowUser = (row[0] || '').toString().trim().toLowerCase();
+        const isPrimary = Boolean(row[6]);
+
+        if (rowUser === username || (isPrimary && username === 'credbaba_admin')) {
+          const status = (row[4] || 'active').toString().toLowerCase().trim();
+          if (status === 'suspended') {
+            return jsonResponse({ result: 'error', reason: 'SUSPENDED', message: 'This user account is suspended.' });
+          }
+
+          const expectedHash = (row[3] || '').toString().trim();
+          if (expectedHash === passHash) {
+            return jsonResponse({
+              result: 'success',
+              user: {
+                username: row[0],
+                name: row[1] || row[0],
+                role: row[2] || 'Marketing Editor',
+                status: status,
+                isPrimary: isPrimary
+              }
+            });
+          } else {
+            return jsonResponse({ result: 'error', reason: 'INVALID', message: 'Invalid password.' });
+          }
+        }
+      }
+
+      return jsonResponse({ result: 'error', reason: 'NOT_FOUND', message: 'User does not exist.' });
+    }
+
+    // ACTION: getUsers (Retrieve registered backoffice users)
+    if (action === 'getUsers') {
+      const uSheet = getUsersSheet(ss);
+      const data = uSheet.getDataRange().getValues();
+      const users = [];
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        const u = (row[0] || '').toString().trim();
+        if (u) {
+          users.push({
+            username: u,
+            name: row[1] || u,
+            role: row[2] || 'Marketing Editor',
+            status: (row[4] || 'active').toString().trim(),
+            createdAt: row[5] || '',
+            isPrimary: Boolean(row[6]),
+            lastUpdated: row[7] || ''
+          });
+        }
+      }
+
+      return jsonResponse({ result: 'success', users: users, total: users.length });
+    }
+
+    // ACTION: saveUser (Create or update backoffice user)
+    if (action === 'saveUser') {
+      const u = payload.user || payload;
+      const username = (u.username || params.username || '').toString().trim().toLowerCase();
+      if (!username) {
+        return jsonResponse({ result: 'error', message: 'Missing username.' });
+      }
+
+      const uSheet = getUsersSheet(ss);
+      const data = uSheet.getDataRange().getValues();
+      let foundRow = -1;
+
+      for (let i = 1; i < data.length; i++) {
+        if ((data[i][0] || '').toString().trim().toLowerCase() === username) {
+          foundRow = i + 1;
+          break;
+        }
+      }
+
+      const now = new Date().toISOString();
+      const isPrimary = username === 'admin' || (foundRow > 0 && Boolean(data[foundRow - 1][6]));
+
+      if (foundRow > 0) {
+        // Update existing user
+        const existingPassHash = data[foundRow - 1][3];
+        const newPassHash = (u.passwordHash || params.passwordHash) ? (u.passwordHash || params.passwordHash).toString().trim() : existingPassHash;
+        const existingCreatedAt = data[foundRow - 1][5];
+
+        const updatedRow = [
+          data[foundRow - 1][0], // keep username casing
+          u.name !== undefined ? u.name : (params.name !== undefined ? params.name : data[foundRow - 1][1]),
+          u.role !== undefined ? u.role : (params.role !== undefined ? params.role : data[foundRow - 1][2]),
+          newPassHash,
+          u.status !== undefined ? u.status : (params.status !== undefined ? params.status : data[foundRow - 1][4]),
+          existingCreatedAt,
+          isPrimary,
+          now
+        ];
+
+        uSheet.getRange(foundRow, 1, 1, updatedRow.length).setValues([updatedRow]);
+        return jsonResponse({ result: 'success', message: 'User updated successfully.', username: username });
       } else {
-        sheet = ss.insertSheet(SHEET_NAME);
+        // Insert new user
+        const passHash = (u.passwordHash || params.passwordHash || '').toString().trim();
+        if (!passHash) {
+          return jsonResponse({ result: 'error', message: 'Password hash is required for new users.' });
+        }
+
+        const newRow = [
+          username,
+          u.name || params.name || username,
+          u.role || params.role || 'Marketing Editor',
+          passHash,
+          u.status || params.status || 'active',
+          now,
+          false,
+          now
+        ];
+
+        uSheet.appendRow(newRow);
+        return jsonResponse({ result: 'success', message: 'User created successfully.', username: username });
       }
     }
 
-    // Set up headers if newly created
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        'ID',
-        'Title',
-        'Slug',
-        'Category',
-        'Author',
-        'Published Date',
-        'Read Time',
-        'Excerpt',
-        'Meta Description',
-        'Hero Image',
-        'Content',
-        'FAQs',
-        'Status',
-        'Updated At'
-      ]);
-      sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#E0E7FF').setFontColor('#3730A3');
-      sheet.setFrozenRows(1);
+    // ACTION: deleteUser (Delete backoffice user)
+    if (action === 'deleteUser') {
+      const targetUser = (payload.username || params.username || '').toString().trim().toLowerCase();
+      if (!targetUser) {
+        return jsonResponse({ result: 'error', message: 'Missing username to delete.' });
+      }
+      if (targetUser === 'admin') {
+        return jsonResponse({ result: 'error', message: 'Primary administrator cannot be deleted.' });
+      }
+
+      const uSheet = getUsersSheet(ss);
+      const data = uSheet.getDataRange().getValues();
+      let deleted = false;
+
+      for (let i = data.length - 1; i >= 1; i--) {
+        const rowUser = (data[i][0] || '').toString().trim().toLowerCase();
+        const isPrimary = Boolean(data[i][6]);
+
+        if (rowUser === targetUser) {
+          if (isPrimary) {
+            return jsonResponse({ result: 'error', message: 'Primary administrator cannot be deleted.' });
+          }
+          uSheet.deleteRow(i + 1);
+          deleted = true;
+          break;
+        }
+      }
+
+      return jsonResponse({ result: 'success', deleted: deleted, username: targetUser });
     }
 
-    // ------------------------------------------------------------------------
+    // ========================================================================
+    // BLOG MANAGEMENT ACTIONS
+    // ========================================================================
+    let sheet = getBlogsSheet(ss);
+
     // ACTION: getBlogs (Used by public website credbaba.com/blog/)
     // Returns ONLY blogs with Status === 'published'
-    // ------------------------------------------------------------------------
     if (action === 'getBlogs') {
       const data = sheet.getDataRange().getValues();
       const blogs = [];
@@ -81,7 +233,6 @@ function handleRequest(e, method) {
         const row = data[i];
         const status = (row[12] || '').toString().toLowerCase().trim();
 
-        // STRICT FILTER: Only return published articles to public website
         if (status === 'published') {
           let faqs = [];
           try {
@@ -110,10 +261,7 @@ function handleRequest(e, method) {
       return jsonResponse({ result: 'success', blogs: blogs, total: blogs.length });
     }
 
-    // ------------------------------------------------------------------------
     // ACTION: getBlog (Used by public reader credbaba.com/blog/post.html?slug=...)
-    // Returns the article ONLY if Status === 'published' (or preview=1)
-    // ------------------------------------------------------------------------
     if (action === 'getBlog') {
       const slug = (params.slug || payload.slug || '').toString().toLowerCase().trim();
       const id = (params.id || payload.id || '').toString().trim();
@@ -131,7 +279,6 @@ function handleRequest(e, method) {
         const status = (row[12] || '').toString().toLowerCase().trim();
 
         if (rowSlug === slug || (id && rowId === id)) {
-          // If status is not published and preview is not requested, return not_found
           if (status !== 'published' && !includeDraft) {
             return jsonResponse({
               result: 'not_found',
@@ -169,10 +316,7 @@ function handleRequest(e, method) {
       return jsonResponse({ result: 'not_found', message: 'Article not found' });
     }
 
-    // ------------------------------------------------------------------------
     // ACTION: getAllBlogs (Used by Backoffice blogs.html table)
-    // Returns all blogs (Drafts + Published)
-    // ------------------------------------------------------------------------
     if (action === 'getAllBlogs') {
       const data = sheet.getDataRange().getValues();
       const blogs = [];
@@ -205,10 +349,7 @@ function handleRequest(e, method) {
       return jsonResponse({ result: 'success', blogs: blogs, total: blogs.length });
     }
 
-    // ------------------------------------------------------------------------
     // ACTION: saveBlog (Save Draft or Publish from Backoffice)
-    // Inserts or updates row by ID or slug
-    // ------------------------------------------------------------------------
     if (action === 'saveBlog') {
       const b = payload.blog || payload;
       if (!b.title || !b.slug) {
@@ -264,9 +405,7 @@ function handleRequest(e, method) {
       });
     }
 
-    // ------------------------------------------------------------------------
-    // ACTION: deleteBlog (Deletes row from Sheet completely)
-    // ------------------------------------------------------------------------
+    // ACTION: deleteBlog (Deletes blog row from Sheet)
     if (action === 'deleteBlog') {
       const targetSlug = (payload.slug || params.slug || '').toString().toLowerCase().trim();
       const targetId = (payload.id || params.id || '').toString().trim();
@@ -278,7 +417,6 @@ function handleRequest(e, method) {
       const data = sheet.getDataRange().getValues();
       let deleted = false;
 
-      // Iterate backwards so row indexes remain valid during deletion
       for (let i = data.length - 1; i >= 1; i--) {
         const rowId = (data[i][0] || '').toString().trim();
         const rowSlug = (data[i][2] || '').toString().toLowerCase().trim();
@@ -298,6 +436,76 @@ function handleRequest(e, method) {
   } catch (err) {
     return jsonResponse({ result: 'error', message: err.toString() });
   }
+}
+
+function getBlogsSheet(ss) {
+  let sheet = ss.getSheetByName(SHEET_NAME_BLOGS);
+  if (!sheet) {
+    const sheets = ss.getSheets();
+    if (sheets.length === 1 && sheets[0].getLastRow() <= 1) {
+      sheet = sheets[0];
+      sheet.setName(SHEET_NAME_BLOGS);
+    } else {
+      sheet = ss.insertSheet(SHEET_NAME_BLOGS);
+    }
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'ID',
+      'Title',
+      'Slug',
+      'Category',
+      'Author',
+      'Published Date',
+      'Read Time',
+      'Excerpt',
+      'Meta Description',
+      'Hero Image',
+      'Content',
+      'FAQs',
+      'Status',
+      'Updated At'
+    ]);
+    sheet.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#E0E7FF').setFontColor('#3730A3');
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+function getUsersSheet(ss) {
+  let uSheet = ss.getSheetByName(SHEET_NAME_USERS);
+  if (!uSheet) {
+    uSheet = ss.insertSheet(SHEET_NAME_USERS);
+  }
+
+  if (uSheet.getLastRow() === 0) {
+    uSheet.appendRow([
+      'Username',
+      'Name',
+      'Role',
+      'PasswordHash',
+      'Status',
+      'CreatedAt',
+      'IsPrimary',
+      'LastUpdated'
+    ]);
+    uSheet.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#F3E8FF').setFontColor('#6B21A8');
+    uSheet.setFrozenRows(1);
+
+    // Default Super Admin
+    uSheet.appendRow([
+      'admin',
+      'Primary Administrator',
+      'Super Admin',
+      'b99905801b4a6f74bec41a53623d5f9206c158b73a668b418bf01de49fa8a952',
+      'active',
+      new Date().toISOString(),
+      true,
+      ''
+    ]);
+  }
+  return uSheet;
 }
 
 function formatDate(val) {

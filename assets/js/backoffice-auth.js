@@ -1,8 +1,11 @@
 // ==========================================================================
 // CredBaba: Backoffice Authentication & Multi-User Security Engine
 // Dedicated for backoffice.credbaba.com
-// Handles multi-user management, SHA-256 salted hashing, lockout,
-// session lifecycle, and domain isolation.
+// Handles:
+//   1. Multi-user cloud synchronization with Google Sheets
+//   2. Role-Based Access Control (Super Admin vs. Marketing Editor / Blog Only)
+//   3. SHA-256 salted hashing & brute-force lockout
+//   4. Navigation permission rendering & page route guards
 // ==========================================================================
 
 const CredBabaBackofficeAuth = (function () {
@@ -10,6 +13,7 @@ const CredBabaBackofficeAuth = (function () {
 
   const SALT = 'credbaba_secure_salt_2026';
   const BACKOFFICE_HOSTNAME = 'backoffice.credbaba.com';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwBskDFL3qYvO5Xg0i9FEcsGig9JJ3Zl44bYbmnQBc9q_cF_AyflphJSLBs7rlr077Y/exec';
   
   const STORAGE_KEY_USERS = 'credbaba_backoffice_users';
   const STORAGE_KEY_ATTEMPTS = 'credbaba_backoffice_login_attempts';
@@ -19,7 +23,32 @@ const CredBabaBackofficeAuth = (function () {
   const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
   const INACTIVITY_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
 
-  // Default primary admin user
+  // Role permissions matrix
+  const ROLE_PERMISSIONS = {
+    'Super Admin': {
+      blogs: true,
+      editor: true,
+      deleteBlogs: true,
+      users: true,
+      settings: true
+    },
+    'Content Manager': {
+      blogs: true,
+      editor: true,
+      deleteBlogs: false,
+      users: false,
+      settings: false
+    },
+    'Marketing Editor': { // "Only blog permission"
+      blogs: true,
+      editor: true,
+      deleteBlogs: false,
+      users: false,
+      settings: false
+    }
+  };
+
+  // Default primary admin user (always available offline)
   const DEFAULT_ADMIN = {
     username: 'admin',
     name: 'Primary Administrator',
@@ -111,7 +140,7 @@ const CredBabaBackofficeAuth = (function () {
     return result;
   }
 
-  // SHA-256 helper with automatic Web Crypto / Pure JS fallback
+  // SHA-256 helper
   async function computeHash(text) {
     if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle && typeof window.crypto.subtle.digest === 'function') {
       try {
@@ -120,9 +149,7 @@ const CredBabaBackofficeAuth = (function () {
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (e) {
-        // Fallback to pure JS if Web Crypto fails
-      }
+      } catch (e) {}
     }
     return sha256Pure(SALT + text);
   }
@@ -133,9 +160,7 @@ const CredBabaBackofficeAuth = (function () {
         const bytes = new Uint8Array(32);
         window.crypto.getRandomValues(bytes);
         return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
-      } catch (e) {
-        // Fallback
-      }
+      } catch (e) {}
     }
     let token = '';
     for (let i = 0; i < 64; i++) {
@@ -144,7 +169,7 @@ const CredBabaBackofficeAuth = (function () {
     return token;
   }
 
-  // Get all registered admin & marketing users
+  // Local storage helpers
   function getUsers() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_USERS);
@@ -155,14 +180,14 @@ const CredBabaBackofficeAuth = (function () {
         }
       }
     } catch (e) {
-      console.warn('Could not read user vault:', e);
+      console.warn('Could not read user cache:', e);
     }
     return [DEFAULT_ADMIN];
   }
 
   function saveUsers(users) {
     try {
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users || []));
     } catch (e) {
       console.error('Failed to save users:', e);
     }
@@ -173,26 +198,20 @@ const CredBabaBackofficeAuth = (function () {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_ATTEMPTS);
       if (raw) return JSON.parse(raw);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
     return { count: 0, firstAttemptAt: 0, lockedUntil: 0 };
   }
 
   function setAttemptInfo(info) {
     try {
       localStorage.setItem(STORAGE_KEY_ATTEMPTS, JSON.stringify(info));
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }
 
   function clearAttempts() {
     try {
       localStorage.removeItem(STORAGE_KEY_ATTEMPTS);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }
 
   function getRemainingLockoutMs() {
@@ -202,7 +221,7 @@ const CredBabaBackofficeAuth = (function () {
     return remaining > 0 ? remaining : 0;
   }
 
-  // Authenticate user
+  // Authenticate user against Google Sheet Cloud Database (with local fallback)
   async function login(username, password) {
     const remainingLockout = getRemainingLockoutMs();
     if (remainingLockout > 0) {
@@ -221,41 +240,106 @@ const CredBabaBackofficeAuth = (function () {
       return { success: false, reason: 'EMPTY', message: 'User ID and password are required.' };
     }
 
-    const users = getUsers();
     const inputHash = await computeHash(inputPass);
 
-    const user = users.find(u => u.username.toLowerCase() === inputUser || 
-      (u.isPrimary && inputUser === 'credbaba_admin'));
+    // 1. Check local Primary Super Admin (instant offline fallback)
+    if ((inputUser === 'admin' || inputUser === 'credbaba_admin') && inputHash === DEFAULT_ADMIN.passwordHash) {
+      clearAttempts();
+      const session = {
+        token: generateSessionToken(),
+        username: 'admin',
+        name: 'Primary Administrator',
+        role: 'Super Admin',
+        isPrimary: true,
+        loginAt: Date.now(),
+        lastActiveAt: Date.now()
+      };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      return { success: true, session };
+    }
 
-    if (user) {
-      if (user.status === 'suspended') {
-        return { success: false, reason: 'SUSPENDED', message: 'This backoffice user account has been suspended.' };
+    // 2. Authenticate against central Google Apps Script Web App
+    try {
+      const scriptUrl = getAppsScriptUrl();
+      const res = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'authenticate',
+          username: inputUser,
+          passwordHash: inputHash
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result === 'success' && data.user) {
+          clearAttempts();
+          const session = {
+            token: generateSessionToken(),
+            username: data.user.username,
+            name: data.user.name || data.user.username,
+            role: data.user.role || 'Marketing Editor',
+            isPrimary: Boolean(data.user.isPrimary),
+            loginAt: Date.now(),
+            lastActiveAt: Date.now()
+          };
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+
+          // Cache user credentials locally on this machine
+          try {
+            const currentUsers = getUsers();
+            const existingIdx = currentUsers.findIndex(u => u.username.toLowerCase() === data.user.username.toLowerCase());
+            const userRecord = {
+              username: data.user.username,
+              name: data.user.name || data.user.username,
+              role: data.user.role || 'Marketing Editor',
+              passwordHash: inputHash,
+              status: data.user.status || 'active',
+              isPrimary: Boolean(data.user.isPrimary)
+            };
+            if (existingIdx >= 0) {
+              currentUsers[existingIdx] = userRecord;
+            } else {
+              currentUsers.push(userRecord);
+            }
+            saveUsers(currentUsers);
+          } catch (e) {}
+
+          return { success: true, session };
+        }
+        if (data && data.reason === 'SUSPENDED') {
+          return { success: false, reason: 'SUSPENDED', message: 'This user account has been suspended.' };
+        }
       }
+    } catch (netErr) {
+      console.warn('Apps Script authentication error, falling back to local vault:', netErr);
+    }
 
-      if (user.passwordHash === inputHash) {
+    // 3. Fallback: check cached users locally
+    const cachedUsers = getUsers();
+    const localMatch = cachedUsers.find(u => u.username.toLowerCase() === inputUser);
+    if (localMatch) {
+      if (localMatch.status === 'suspended') {
+        return { success: false, reason: 'SUSPENDED', message: 'This user account has been suspended.' };
+      }
+      if (localMatch.passwordHash === inputHash) {
         clearAttempts();
-
         const session = {
           token: generateSessionToken(),
-          username: user.username,
-          name: user.name || user.username,
-          role: user.role || 'Admin',
-          isPrimary: Boolean(user.isPrimary),
+          username: localMatch.username,
+          name: localMatch.name || localMatch.username,
+          role: localMatch.role || 'Marketing Editor',
+          isPrimary: Boolean(localMatch.isPrimary),
           loginAt: Date.now(),
           lastActiveAt: Date.now()
         };
-
-        try {
-          sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-        } catch (e) {
-          console.error('Session storage failed:', e);
-        }
-
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
         return { success: true, session };
       }
     }
 
-    // Record failure
+    // Record failure attempt
     const info = getAttemptInfo();
     info.count = (info.count || 0) + 1;
     if (!info.firstAttemptAt) info.firstAttemptAt = Date.now();
@@ -305,9 +389,7 @@ const CredBabaBackofficeAuth = (function () {
   function logout() {
     try {
       sessionStorage.removeItem(SESSION_KEY);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
     window.location.href = 'login.html';
   }
 
@@ -321,35 +403,111 @@ const CredBabaBackofficeAuth = (function () {
     return true;
   }
 
-  // Change current user's password
-  async function changePassword(currentPassword, newPassword) {
+  // ========================================================================
+  // ROLE-BASED ACCESS CONTROL (RBAC)
+  // ========================================================================
+  function hasPermission(permissionKey) {
     const session = getSession();
-    if (!session) return { success: false, message: 'You must be logged in.' };
-
-    const users = getUsers();
-    const userIndex = users.findIndex(u => u.username.toLowerCase() === session.username.toLowerCase());
-    if (userIndex < 0) return { success: false, message: 'User not found.' };
-
-    const currentHash = await computeHash(currentPassword);
-    if (currentHash !== users[userIndex].passwordHash) {
-      return { success: false, message: 'Current password does not match.' };
-    }
-
-    if (!newPassword || newPassword.length < 8) {
-      return { success: false, message: 'New password must be at least 8 characters long.' };
-    }
-
-    users[userIndex].passwordHash = await computeHash(newPassword);
-    users[userIndex].lastUpdated = new Date().toISOString();
-    saveUsers(users);
-
-    return { success: true, message: 'Password updated successfully.' };
+    if (!session) return false;
+    const role = session.role || 'Marketing Editor';
+    if (role === 'Super Admin' || session.isPrimary) return true;
+    const perms = ROLE_PERMISSIONS[role];
+    return Boolean(perms && perms[permissionKey]);
   }
 
-  // Create new user (Marketing / Editor / Admin)
+  function canManageUsers() {
+    return hasPermission('users');
+  }
+
+  function canManageSettings() {
+    return hasPermission('settings');
+  }
+
+  function canDeleteBlogs() {
+    return hasPermission('deleteBlogs');
+  }
+
+  // Enforces page-level route security
+  function enforcePageAccess(requiredPermission) {
+    if (!requireAuth()) return false;
+    if (requiredPermission && !hasPermission(requiredPermission)) {
+      alert('Access Denied: You do not have permission to access this section.');
+      window.location.replace('blogs.html');
+      return false;
+    }
+    return true;
+  }
+
+  // Dynamic Apps Script URL lookup (settings override or hardcoded default)
+  function getAppsScriptUrl() {
+    let url = APPS_SCRIPT_URL;
+    try {
+      const raw = localStorage.getItem('credbaba_backoffice_settings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.appsScriptUrl && parsed.appsScriptUrl.trim()) {
+          url = parsed.appsScriptUrl.trim();
+        }
+      }
+    } catch (e) {}
+    return url;
+  }
+
+  // Automatically cleans navbar based on user role
+  function initNav() {
+    const session = getSession();
+    if (!session) return;
+
+    const usernameEl = document.getElementById('sessionUsername');
+    const roleEl = document.getElementById('sessionRole');
+    if (usernameEl) usernameEl.textContent = session.name || session.username;
+    if (roleEl) roleEl.textContent = `(${session.role || 'Admin'})`;
+
+    const isSuper = session.role === 'Super Admin' || session.isPrimary;
+
+    // Remove restricted links from DOM for non-super-admins
+    document.querySelectorAll('[data-perm="users"]').forEach(el => {
+      if (!isSuper && !canManageUsers()) el.remove();
+    });
+    document.querySelectorAll('[data-perm="settings"]').forEach(el => {
+      if (!isSuper && !canManageSettings()) el.remove();
+    });
+  }
+
+  // Auto-init navigation on all pages
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initNav);
+    } else {
+      initNav();
+    }
+    window.addEventListener('load', initNav);
+  }
+
+  // Fetch users live from Google Sheet Cloud Database
+  async function fetchUsers() {
+    try {
+      const url = getAppsScriptUrl();
+      const res = await fetch(url + '?action=getUsers&_t=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result === 'success' && Array.isArray(data.users)) {
+          saveUsers(data.users);
+          return data.users;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch cloud users, falling back to local cache:', e);
+    }
+    return getUsers();
+  }
+
+  // Add new user locally AND sync to Google Sheet
   async function addUser(userData) {
     const session = getSession();
-    if (!session) return { success: false, message: 'Unauthorized' };
+    if (!session || !canManageUsers()) {
+      return { success: false, message: 'Unauthorized: Super Admin permission required.' };
+    }
 
     const username = (userData.username || '').trim().toLowerCase();
     if (!username || username.length < 3) {
@@ -377,13 +535,45 @@ const CredBabaBackofficeAuth = (function () {
       isPrimary: false
     };
 
+    // 1. Save locally
     users.push(newUser);
     saveUsers(users);
-    return { success: true, user: newUser, message: `User ${newUser.username} created successfully.` };
+
+    // 2. Sync to central Google Sheet
+    try {
+      const scriptUrl = getAppsScriptUrl();
+      const res = await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveUser',
+          user: newUser
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.result === 'error') {
+          return { success: false, message: data.message };
+        }
+      }
+    } catch (e) {
+      console.warn('Apps Script user sync error:', e);
+    }
+
+    return {
+      success: true,
+      user: newUser,
+      message: `User ${newUser.username} (${newUser.role}) created and synchronized across all devices.`
+    };
   }
 
   // Update user role or status
-  function updateUser(username, updates) {
+  async function updateUser(username, updates) {
+    const session = getSession();
+    if (!session || !canManageUsers()) {
+      return { success: false, message: 'Unauthorized: Super Admin permission required.' };
+    }
+
     const users = getUsers();
     const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
     if (userIndex < 0) return { success: false, message: 'User not found.' };
@@ -399,24 +589,107 @@ const CredBabaBackofficeAuth = (function () {
 
     target.lastUpdated = new Date().toISOString();
     saveUsers(users);
+
+    // Sync to Google Sheet
+    try {
+      const scriptUrl = getAppsScriptUrl();
+      await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveUser',
+          user: {
+            username: target.username,
+            name: target.name,
+            role: target.role,
+            status: target.status
+          }
+        })
+      });
+    } catch (e) {
+      console.warn('Apps Script updateUser sync error:', e);
+    }
+
     return { success: true, message: `User ${target.username} updated.` };
   }
 
-  // Delete user
-  function deleteUser(username) {
+  // Delete user locally and from Google Sheet
+  async function deleteUser(username) {
+    const session = getSession();
+    if (!session || !canManageUsers()) {
+      return { success: false, message: 'Unauthorized: Super Admin permission required.' };
+    }
+
     const users = getUsers();
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!user) return { success: false, message: 'User not found.' };
-    if (user.isPrimary) {
+    if (user.isPrimary || user.username.toLowerCase() === 'admin') {
       return { success: false, message: 'The primary super admin account cannot be deleted.' };
     }
 
     const filtered = users.filter(u => u.username.toLowerCase() !== username.toLowerCase());
     saveUsers(filtered);
+
+    // Delete from Google Sheet
+    try {
+      const scriptUrl = getAppsScriptUrl();
+      await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'deleteUser',
+          username: username
+        })
+      });
+    } catch (e) {
+      console.warn('Apps Script deleteUser sync error:', e);
+    }
+
     return { success: true, message: `User ${username} removed successfully.` };
   }
 
-  // Reset to default credentials
+  // Change current user's password
+  async function changePassword(currentPassword, newPassword) {
+    const session = getSession();
+    if (!session) return { success: false, message: 'You must be logged in.' };
+
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.username.toLowerCase() === session.username.toLowerCase());
+    if (userIndex < 0) return { success: false, message: 'User not found.' };
+
+    const currentHash = await computeHash(currentPassword);
+    if (currentHash !== users[userIndex].passwordHash) {
+      return { success: false, message: 'Current password does not match.' };
+    }
+
+    if (!newPassword || newPassword.length < 8) {
+      return { success: false, message: 'New password must be at least 8 characters long.' };
+    }
+
+    const newHash = await computeHash(newPassword);
+    users[userIndex].passwordHash = newHash;
+    users[userIndex].lastUpdated = new Date().toISOString();
+    saveUsers(users);
+
+    // Sync to Google Sheet
+    try {
+      const scriptUrl = getAppsScriptUrl();
+      await fetch(scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'saveUser',
+          user: {
+            username: users[userIndex].username,
+            passwordHash: newHash
+          }
+        })
+      });
+    } catch (e) {}
+
+    return { success: true, message: 'Password updated successfully.' };
+  }
+
   function resetToDefaults() {
     localStorage.removeItem(STORAGE_KEY_USERS);
     clearAttempts();
@@ -428,8 +701,15 @@ const CredBabaBackofficeAuth = (function () {
     logout,
     getSession,
     requireAuth,
+    enforcePageAccess,
+    initNav,
+    hasPermission,
+    canManageUsers,
+    canManageSettings,
+    canDeleteBlogs,
     changePassword,
     getUsers,
+    fetchUsers,
     addUser,
     updateUser,
     deleteUser,
