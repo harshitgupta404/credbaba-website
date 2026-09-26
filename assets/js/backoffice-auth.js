@@ -30,22 +30,11 @@ const CredBabaBackofficeAuth = (function () {
     isPrimary: true
   };
 
-  // Domain guard: ensure normal users on credbaba.com don't stumble onto backoffice
-  function checkDomainIsolation() {
-    const host = window.location.hostname;
-    // Allow local development and GitHub Pages staging
-    if (host === 'localhost' || host === '127.0.0.1' || host.endsWith('.github.io')) {
-      return;
-    }
-    // If accessed on primary public site (credbaba.com), redirect to backoffice subdomain
-    if (host === 'credbaba.com' || host === 'www.credbaba.com') {
-      const targetPath = window.location.pathname.replace(/^\/admin/, '/backoffice');
-      window.location.replace(`https://${BACKOFFICE_HOSTNAME}${targetPath}${window.location.search}`);
-    }
-  }
-
-  // Run domain isolation check immediately
-  checkDomainIsolation();
+  // Domain & isolation notes:
+  // Backoffice is unindexed (robots.txt Disallow: /backoffice/), noindex/nofollow tagged,
+  // and unlinked from the public navigation. When DNS Subdomain Forwarding is active
+  // in GoDaddy (backoffice.credbaba.com -> credbaba.com/backoffice/), users can reach
+  // this interface via both URLs without redirect loops.
 
   // Web Crypto SHA-256 helper
   async function computeHash(text) {
