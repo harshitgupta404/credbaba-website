@@ -1,0 +1,65 @@
+[
+  {
+    "id": "test-test-test",
+    "isBuiltin": false,
+    "slug": "test-test-test",
+    "title": "Test Blog: Published from CredBaba Backoffice",
+    "category": "Loan Guide",
+    "author": "CredBaba Editorial Team",
+    "publishedAt": "2026-09-26",
+    "readTime": "3 min read",
+    "excerpt": "This is a published test article created from the CredBaba backoffice console to verify live publishing and website synchronization.",
+    "heroImage": "",
+    "content": "<p>Welcome to CredBaba! This article confirms that the backoffice blog publishing pipeline is fully operational.</p><p>You can edit this article anytime from the <strong>Backoffice Editor</strong>, format rich text, insert custom loan CTAs, and upload hero images.</p>",
+    "faqs": [
+      {
+        "q": "How do newly published blogs reach the website?",
+        "a": "Blogs published in the backoffice are saved in the central blog directory and synced across credbaba.com so all visitors can read them."
+      }
+    ],
+    "status": "published",
+    "url": "post.html?slug=test-test-test"
+  },
+  {
+    "id": "builtin-1",
+    "isBuiltin": true,
+    "slug": "best-home-loan-options-india-interest-rates-tenure",
+    "title": "Best Home Loan Options in India 2026: Compare Rates, Tenure & Benefits",
+    "category": "Home Loans",
+    "author": "CredBaba Research Team",
+    "publishedAt": "2026-08-15",
+    "readTime": "8 min read",
+    "excerpt": "Compare interest rates, tenure, and features from SBI, HDFC, ICICI, Axis, Kotak, PNB, and LIC Housing Finance. Everything you need to choose the right home loan in 2026.",
+    "heroImage": "",
+    "status": "published",
+    "url": "best-home-loan-options-india-interest-rates-tenure.html"
+  },
+  {
+    "id": "builtin-2",
+    "isBuiltin": true,
+    "slug": "how-to-apply-for-loan-online-india",
+    "title": "How to Apply for a Loan Online in India (2026): A Complete Guide",
+    "category": "Loan Guide",
+    "author": "CredBaba Editorial Team",
+    "publishedAt": "2026-08-15",
+    "readTime": "7 min read",
+    "excerpt": "A step-by-step guide to applying for a Personal, Business, or Home Loan online in India. Covers eligibility, documents, tips for quick approval, and what to check before you sign.",
+    "heroImage": "",
+    "status": "published",
+    "url": "how-to-apply-for-loan-online-india.html"
+  },
+  {
+    "id": "builtin-3",
+    "isBuiltin": true,
+    "slug": "personal-loan-vs-credit-card",
+    "title": "Personal Loan vs Credit Card Loan: Which Is Better in 2026?",
+    "category": "Personal Loans",
+    "author": "CredBaba Financial Advisory",
+    "publishedAt": "2026-08-22",
+    "readTime": "9 min read",
+    "excerpt": "Compare interest rates, tenure, processing speed and credit score impact to decide between a personal loan and a credit card loan. Includes a simple decision guide and FAQs.",
+    "heroImage": "",
+    "status": "published",
+    "url": "personal-loan-vs-credit-card.html"
+  }
+]

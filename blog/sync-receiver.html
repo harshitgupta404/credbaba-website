@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>CredBaba Sync Receiver</title>
+</head>
+<body>
+<script>
+  (function () {
+    'use strict';
+    const ALLOWED_ORIGINS = [
+      'https://backoffice.credbaba.com',
+      'http://backoffice.credbaba.com',
+      'http://localhost:8080',
+      'http://127.0.0.1:8080'
+    ];
+
+    function isAllowedOrigin(origin) {
+      if (ALLOWED_ORIGINS.includes(origin)) return true;
+      if (origin.endsWith('.github.io')) return true;
+      return false;
+    }
+
+    window.addEventListener('message', function (event) {
+      if (!isAllowedOrigin(event.origin)) return;
+
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+
+      if (data.type === 'CB_SYNC_BLOGS' && Array.isArray(data.blogs)) {
+        try {
+          localStorage.setItem('credbaba_custom_blogs', JSON.stringify(data.blogs));
+          if (event.source) {
+            event.source.postMessage({ type: 'CB_SYNC_ACK', success: true, count: data.blogs.length }, event.origin);
+          }
+        } catch (e) {
+          console.warn('[SyncReceiver] Failed to store blogs:', e);
+        }
+      }
+    });
+
+    // Notify parent if embedded in iframe
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'CB_RECEIVER_READY' }, '*');
+    }
+  })();
+</script>
+</body>
+</html>

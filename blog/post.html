@@ -131,7 +131,7 @@
 <script src="../assets/js/blog-store.js"></script>
 <script src="../assets/js/backoffice-auth.js"></script>
 <script>
-  (function () {
+  (async function () {
     const urlParams = new URLSearchParams(window.location.search);
     const slug = urlParams.get('slug');
     const mainEl = document.getElementById('postMain');
@@ -141,13 +141,21 @@
       return;
     }
 
-    const blog = CredBabaBlogStore.getBlogBySlug(slug);
+    // Show loading state while retrieving
+    mainEl.innerHTML = `
+      <div style="padding: var(--space-10) 0; text-align: center; max-width: 600px; margin: 0 auto;">
+        <h2 style="font-size: var(--text-2xl); color: var(--color-ink); margin-bottom: var(--space-3);">Loading article...</h2>
+        <p style="color: var(--color-ink-soft);">Retrieving the latest version from CredBaba.</p>
+      </div>
+    `;
+
+    const blog = await CredBabaBlogStore.fetchBlogBySlug(slug);
 
     if (!blog) {
       mainEl.innerHTML = `
         <div style="padding: var(--space-10) 0; text-align: center; max-width: 600px; margin: 0 auto;">
           <h1 style="font-size: var(--text-3xl); margin-bottom: var(--space-3);">Article Not Found</h1>
-          <p style="color: var(--color-ink-soft); margin-bottom: var(--space-6);">The article you requested could not be located or may have been updated.</p>
+          <p style="color: var(--color-ink-soft); margin-bottom: var(--space-6);">The article "${CredBabaBlogStore.escapeHtml(slug)}" could not be located or may still be deploying.</p>
           <a href="index.html" class="btn btn-primary">← Return to Blog Directory</a>
         </div>
       `;

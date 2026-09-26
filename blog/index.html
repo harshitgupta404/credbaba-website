@@ -133,8 +133,8 @@
     this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
 
-  // Render any new articles published from the Admin Panel
-  (function () {
+  // Render any new articles published from the Admin Panel or central repository
+  (async function () {
     var grid = document.querySelector('.blog-grid');
     if (!grid || typeof CredBabaBlogStore === 'undefined') return;
 
@@ -143,10 +143,10 @@
       existingHrefs.add(a.getAttribute('href'));
     });
 
-    var published = CredBabaBlogStore.getPublishedBlogs();
+    var published = await CredBabaBlogStore.fetchPublishedBlogs();
     published.forEach(function (blog) {
       var targetUrl = blog.url || ('post.html?slug=' + encodeURIComponent(blog.slug));
-      if (existingHrefs.has(targetUrl) || existingHrefs.has(blog.slug + '.html')) {
+      if (existingHrefs.has(targetUrl) || existingHrefs.has(blog.slug + '.html') || existingHrefs.has(blog.slug)) {
         return;
       }
 

@@ -82,13 +82,22 @@ const CredBabaBlogStore = (function () {
   function getSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          githubRepo: parsed.githubRepo || 'credbaba-website',
+          githubOwner: parsed.githubOwner || 'harshitgupta404',
+          githubBranch: parsed.githubBranch || 'main',
+          githubToken: parsed.githubToken || '',
+          appsScriptUrl: parsed.appsScriptUrl || ''
+        };
+      }
     } catch (e) {
       // ignore
     }
     return {
       githubRepo: 'credbaba-website',
-      githubOwner: '',
+      githubOwner: 'harshitgupta404',
       githubBranch: 'main',
       githubToken: '',
       appsScriptUrl: ''
@@ -101,6 +110,34 @@ const CredBabaBlogStore = (function () {
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  // Cross-domain preview sync (mirrors backoffice blogs to credbaba.com in admin browser)
+  let syncFrame = null;
+  function triggerCrossDomainSync(blogs) {
+    if (typeof window === 'undefined') return;
+    const isBackoffice = window.location.hostname.includes('backoffice') || window.location.port === '8080';
+    if (!isBackoffice) return;
+
+    if (!syncFrame) {
+      syncFrame = document.createElement('iframe');
+      syncFrame.src = 'https://credbaba.com/blog/sync-receiver.html';
+      syncFrame.style.display = 'none';
+      document.body.appendChild(syncFrame);
+      syncFrame.onload = function () {
+        try {
+          syncFrame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
+        } catch (e) {
+          // ignore
+        }
+      };
+    } else {
+      try {
+        syncFrame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
@@ -195,8 +232,9 @@ const CredBabaBlogStore = (function () {
     }
 
     saveCustomBlogs(custom);
+    triggerCrossDomainSync(custom);
 
-    // Optional background sync to Apps Script or GitHub if configured
+    // Optional background sync to Apps Script if configured
     const settings = getSettings();
     if (settings.appsScriptUrl) {
       try {
@@ -211,6 +249,148 @@ const CredBabaBlogStore = (function () {
     }
 
     return blogRecord;
+  }
+
+  // Asynchronously fetch blog by slug (checking local memory, blogs.json, or remote)
+  async function fetchBlogBySlug(slug) {
+    // 1. Check local
+    let blog = getBlogBySlug(slug);
+    if (blog && blog.content) {
+      return blog;
+    }
+
+    // 2. Fetch from blog/data/blogs.json
+    try {
+      const basePath = window.location.pathname.includes('/blog/') ? 'data/blogs.json' : 'blog/data/blogs.json';
+      const res = await fetch(basePath + '?_t=' + Date.now());
+      if (res.ok) {
+        const remoteBlogs = await res.json();
+        if (Array.isArray(remoteBlogs)) {
+          const match = remoteBlogs.find(b => b.slug === slug || b.id === slug);
+          if (match) {
+            // Cache into local storage
+            const custom = getCustomBlogs();
+            if (!custom.some(b => b.slug === match.slug)) {
+              custom.unshift(match);
+              try { saveCustomBlogs(custom); } catch(e){}
+            }
+            return match;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch remote blogs.json:', e);
+    }
+
+    // 3. Optional Apps Script remote lookup if configured
+    const settings = getSettings();
+    if (settings.appsScriptUrl) {
+      try {
+        const res = await fetch(settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(slug));
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.blog) {
+            return data.blog;
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return blog || null;
+  }
+
+  // Asynchronously fetch all published blogs (merging local with remote blogs.json)
+  async function fetchPublishedBlogs() {
+    let local = getPublishedBlogs();
+    try {
+      const basePath = window.location.pathname.includes('/blog/') ? 'data/blogs.json' : 'blog/data/blogs.json';
+      const res = await fetch(basePath + '?_t=' + Date.now());
+      if (res.ok) {
+        const remote = await res.json();
+        if (Array.isArray(remote)) {
+          const localSlugs = new Set(local.map(b => b.slug));
+          const newRemote = remote.filter(b => b.status === 'published' && !localSlugs.has(b.slug));
+          return [...local, ...newRemote].sort((a, b) => {
+            const dateA = new Date(a.publishedAt || 0).getTime();
+            const dateB = new Date(b.publishedAt || 0).getTime();
+            return dateB - dateA;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+    return local;
+  }
+
+  // Commit published blog directly to credbaba-website repo via GitHub REST API
+  async function publishToGitHub(blog) {
+    const settings = getSettings();
+    const token = settings.githubToken;
+    const owner = settings.githubOwner || 'harshitgupta404';
+    const repo = settings.githubRepo || 'credbaba-website';
+    const branch = settings.githubBranch || 'main';
+
+    if (!token || !owner || !repo) {
+      throw new Error('GitHub API token not configured.');
+    }
+
+    const apiHeaders = {
+      'Authorization': `token ${token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    };
+
+    // Step 1: Update blog/data/blogs.json
+    let blogsList = [];
+    let fileSha = null;
+    try {
+      const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/blog/data/blogs.json?ref=${branch}`, {
+        headers: apiHeaders
+      });
+      if (getRes.ok) {
+        const fileData = await getRes.json();
+        fileSha = fileData.sha;
+        const decoded = decodeURIComponent(escape(atob(fileData.content.replace(/\s/g, ''))));
+        blogsList = JSON.parse(decoded);
+      }
+    } catch (e) {
+      console.warn('Could not read existing blogs.json from GitHub:', e);
+    }
+
+    // Merge blog into list
+    const existingIndex = blogsList.findIndex(b => b.id === blog.id || b.slug === blog.slug);
+    if (existingIndex >= 0) {
+      blogsList[existingIndex] = blog;
+    } else {
+      blogsList.unshift(blog);
+    }
+
+    const updatedJsonString = JSON.stringify(blogsList, null, 2);
+    const jsonBase64 = btoa(unescape(encodeURIComponent(updatedJsonString)));
+
+    const putJsonRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/blog/data/blogs.json`, {
+      method: 'PUT',
+      headers: apiHeaders,
+      body: JSON.stringify({
+        message: `feat(blog): publish "${blog.title}" to blog directory`,
+        content: jsonBase64,
+        sha: fileSha || undefined,
+        branch: branch
+      })
+    });
+
+    if (!putJsonRes.ok) {
+      const err = await putJsonRes.json();
+      throw new Error(err.message || 'Failed to update blogs.json on GitHub');
+    }
+
+    return {
+      success: true,
+      message: 'Successfully published to GitHub Pages repository! Live site will update in ~30 seconds.'
+    };
   }
 
   // Delete blog
@@ -493,6 +673,10 @@ const CredBabaBlogStore = (function () {
     getAllBlogs,
     getPublishedBlogs,
     getBlogBySlug,
+    fetchBlogBySlug,
+    fetchPublishedBlogs,
+    publishToGitHub,
+    triggerCrossDomainSync,
     saveBlog,
     deleteBlog,
     compressImage,
