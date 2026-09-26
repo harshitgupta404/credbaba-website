@@ -135,69 +135,66 @@ const CredBabaBlogStore = (function () {
 
   // Cross-domain preview sync (mirrors backoffice changes to credbaba.com)
   let syncFrame = null;
+  let syncFrameLoaded = false;
+  const pendingSyncMessages = [];
+
   function getSyncFrame() {
     if (typeof window === 'undefined') return null;
     const isBackoffice = window.location.hostname.includes('backoffice') || window.location.port === '8080';
     if (!isBackoffice) return null;
 
     if (!syncFrame) {
-      syncFrame = document.createElement('iframe');
-      syncFrame.src = 'https://credbaba.com/blog/sync-receiver.html';
-      syncFrame.style.display = 'none';
-      document.body.appendChild(syncFrame);
+      try {
+        syncFrame = document.createElement('iframe');
+        syncFrame.src = 'https://credbaba.com/blog/sync-receiver.html';
+        syncFrame.style.display = 'none';
+        syncFrame.onload = function () {
+          syncFrameLoaded = true;
+          flushPendingSyncMessages();
+        };
+        document.body.appendChild(syncFrame);
+      } catch (e) {
+        return null;
+      }
     }
     return syncFrame;
   }
 
-  function triggerCrossDomainSync(blogs) {
-    const frame = getSyncFrame();
-    if (!frame) return;
-
-    const sendMessage = () => {
+  function flushPendingSyncMessages() {
+    if (!syncFrame || !syncFrame.contentWindow) return;
+    while (pendingSyncMessages.length > 0) {
+      const msg = pendingSyncMessages.shift();
       try {
-        frame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
+        syncFrame.contentWindow.postMessage(msg, 'https://credbaba.com');
       } catch (e) {}
-    };
-
-    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
-      sendMessage();
-    } else {
-      frame.onload = sendMessage;
     }
+  }
+
+  function sendSyncMessage(msg) {
+    try {
+      const frame = getSyncFrame();
+      if (!frame) return;
+
+      if (syncFrameLoaded && frame.contentWindow) {
+        frame.contentWindow.postMessage(msg, 'https://credbaba.com');
+      } else {
+        pendingSyncMessages.push(msg);
+      }
+    } catch (e) {
+      // Never allow iframe synchronization issues to disrupt publishing
+    }
+  }
+
+  function triggerCrossDomainSync(blogs) {
+    sendSyncMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs });
   }
 
   function triggerCrossDomainSettingsSync(settings) {
-    const frame = getSyncFrame();
-    if (!frame) return;
-
-    const sendMessage = () => {
-      try {
-        frame.contentWindow.postMessage({ type: 'CB_SYNC_SETTINGS', settings: settings }, 'https://credbaba.com');
-      } catch (e) {}
-    };
-
-    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
-      sendMessage();
-    } else {
-      frame.onload = sendMessage;
-    }
+    sendSyncMessage({ type: 'CB_SYNC_SETTINGS', settings: settings });
   }
 
   function triggerCrossDomainDelete(id, slug) {
-    const frame = getSyncFrame();
-    if (!frame) return;
-
-    const sendMessage = () => {
-      try {
-        frame.contentWindow.postMessage({ type: 'CB_DELETE_BLOG', id: id, slug: slug }, 'https://credbaba.com');
-      } catch (e) {}
-    };
-
-    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
-      sendMessage();
-    } else {
-      frame.onload = sendMessage;
-    }
+    sendSyncMessage({ type: 'CB_DELETE_BLOG', id: id, slug: slug });
   }
 
   // Calculate estimated reading time
