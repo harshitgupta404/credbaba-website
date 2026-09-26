@@ -133,10 +133,13 @@
     this.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
 
-  // Render any new articles published from the Admin Panel or central repository
+  // Render dynamically published articles from Google Sheets / central blog repository
   (async function () {
     var grid = document.querySelector('.blog-grid');
     if (!grid || typeof CredBabaBlogStore === 'undefined') return;
+
+    // Purge any existing dynamic cards so drafted/deleted articles are never visible
+    grid.querySelectorAll('.dynamic-blog-card').forEach(function (card) { card.remove(); });
 
     var existingHrefs = new Set();
     grid.querySelectorAll('.blog-read-link').forEach(function (a) {
@@ -145,6 +148,10 @@
 
     var published = await CredBabaBlogStore.fetchPublishedBlogs();
     published.forEach(function (blog) {
+      // Skip built-in articles that are already hardcoded in static HTML
+      if (blog.isBuiltin) return;
+      if (blog.status !== 'published') return;
+
       var targetUrl = blog.url || ('post.html?slug=' + encodeURIComponent(blog.slug));
       if (existingHrefs.has(targetUrl) || existingHrefs.has(blog.slug + '.html') || existingHrefs.has(blog.slug)) {
         return;
@@ -155,7 +162,7 @@
         : 'Recent';
 
       var card = document.createElement('div');
-      card.className = 'blog-card';
+      card.className = 'blog-card dynamic-blog-card';
       card.innerHTML =
         '<span class="blog-card-tag">' + CredBabaBlogStore.escapeHtml(blog.category || 'Loan Guide') + '</span>' +
         '<h2>' + CredBabaBlogStore.escapeHtml(blog.title) + '</h2>' +
@@ -165,6 +172,7 @@
           '<a href="' + targetUrl + '" class="blog-read-link">Read →</a>' +
         '</div>';
       grid.prepend(card);
+      existingHrefs.add(targetUrl);
     });
   })();
 </script>

@@ -1,7 +1,8 @@
 // ==========================================================================
-// CredBaba: Blog Storage & Publishing Engine
-// Manages blog data persistence, image compression, static HTML generation,
-// and website synchronization.
+// CredBaba: Blog Storage & Publishing Engine (Option 1: Zero-Git-Commit Cloud CMS)
+// Manages real-time blog persistence with Google Sheets (via Google Apps Script),
+// instant website synchronization, status toggling (draft/published), deletions,
+// image compression, and fallback caching.
 // ==========================================================================
 
 const CredBabaBlogStore = (function () {
@@ -10,7 +11,10 @@ const CredBabaBlogStore = (function () {
   const STORAGE_KEY_CUSTOM_BLOGS = 'credbaba_custom_blogs';
   const STORAGE_KEY_SETTINGS = 'credbaba_admin_settings';
 
-  // Seed / Built-in blogs already existing on the website
+  // Configured default Apps Script Web App URL (can also be configured via Settings in Backoffice)
+  const DEFAULT_APPS_SCRIPT_URL = '';
+
+  // Built-in SEO cornerstone blogs
   const BUILTIN_BLOGS = [
     {
       id: 'builtin-1',
@@ -71,73 +75,128 @@ const CredBabaBlogStore = (function () {
 
   function saveCustomBlogs(blogs) {
     try {
-      localStorage.setItem(STORAGE_KEY_CUSTOM_BLOGS, JSON.stringify(blogs));
+      localStorage.setItem(STORAGE_KEY_CUSTOM_BLOGS, JSON.stringify(blogs || []));
     } catch (e) {
       console.error('Failed to save custom blogs:', e);
-      throw new Error('Local storage quota exceeded. Consider compressing images before saving.');
     }
   }
 
-  // Get settings (GitHub API, Apps Script Web App URL, etc.)
+  // Purge a specific blog from localStorage by slug or ID
+  function purgeLocalBlog(slugOrId) {
+    if (!slugOrId) return;
+    const target = slugOrId.toString().toLowerCase().trim();
+    const custom = getCustomBlogs();
+    const filtered = custom.filter(b => (b.slug || '').toLowerCase() !== target && (b.id || '') !== target);
+    if (filtered.length !== custom.length) {
+      saveCustomBlogs(filtered);
+    }
+  }
+
+  // Get settings (Apps Script Web App URL, GitHub API tokens if any)
   function getSettings() {
+    let scriptUrl = DEFAULT_APPS_SCRIPT_URL;
+    let githubRepo = 'credbaba-website';
+    let githubOwner = 'harshitgupta404';
+    let githubBranch = 'main';
+    let githubToken = '';
+
     try {
       const raw = localStorage.getItem(STORAGE_KEY_SETTINGS);
       if (raw) {
         const parsed = JSON.parse(raw);
-        return {
-          githubRepo: parsed.githubRepo || 'credbaba-website',
-          githubOwner: parsed.githubOwner || 'harshitgupta404',
-          githubBranch: parsed.githubBranch || 'main',
-          githubToken: parsed.githubToken || '',
-          appsScriptUrl: parsed.appsScriptUrl || ''
-        };
+        if (parsed.appsScriptUrl) scriptUrl = parsed.appsScriptUrl;
+        if (parsed.githubRepo) githubRepo = parsed.githubRepo;
+        if (parsed.githubOwner) githubOwner = parsed.githubOwner;
+        if (parsed.githubBranch) githubBranch = parsed.githubBranch;
+        if (parsed.githubToken) githubToken = parsed.githubToken;
       }
     } catch (e) {
       // ignore
     }
+
     return {
-      githubRepo: 'credbaba-website',
-      githubOwner: 'harshitgupta404',
-      githubBranch: 'main',
-      githubToken: '',
-      appsScriptUrl: ''
+      appsScriptUrl: scriptUrl,
+      githubRepo: githubRepo,
+      githubOwner: githubOwner,
+      githubBranch: githubBranch,
+      githubToken: githubToken
     };
   }
 
   function saveSettings(settings) {
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+      triggerCrossDomainSettingsSync(settings);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  // Cross-domain preview sync (mirrors backoffice blogs to credbaba.com in admin browser)
+  // Cross-domain preview sync (mirrors backoffice changes to credbaba.com)
   let syncFrame = null;
-  function triggerCrossDomainSync(blogs) {
-    if (typeof window === 'undefined') return;
+  function getSyncFrame() {
+    if (typeof window === 'undefined') return null;
     const isBackoffice = window.location.hostname.includes('backoffice') || window.location.port === '8080';
-    if (!isBackoffice) return;
+    if (!isBackoffice) return null;
 
     if (!syncFrame) {
       syncFrame = document.createElement('iframe');
       syncFrame.src = 'https://credbaba.com/blog/sync-receiver.html';
       syncFrame.style.display = 'none';
       document.body.appendChild(syncFrame);
-      syncFrame.onload = function () {
-        try {
-          syncFrame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
-        } catch (e) {
-          // ignore
-        }
-      };
-    } else {
+    }
+    return syncFrame;
+  }
+
+  function triggerCrossDomainSync(blogs) {
+    const frame = getSyncFrame();
+    if (!frame) return;
+
+    const sendMessage = () => {
       try {
-        syncFrame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
-      } catch (e) {
-        // ignore
-      }
+        frame.contentWindow.postMessage({ type: 'CB_SYNC_BLOGS', blogs: blogs }, 'https://credbaba.com');
+      } catch (e) {}
+    };
+
+    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
+      sendMessage();
+    } else {
+      frame.onload = sendMessage;
+    }
+  }
+
+  function triggerCrossDomainSettingsSync(settings) {
+    const frame = getSyncFrame();
+    if (!frame) return;
+
+    const sendMessage = () => {
+      try {
+        frame.contentWindow.postMessage({ type: 'CB_SYNC_SETTINGS', settings: settings }, 'https://credbaba.com');
+      } catch (e) {}
+    };
+
+    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
+      sendMessage();
+    } else {
+      frame.onload = sendMessage;
+    }
+  }
+
+  function triggerCrossDomainDelete(id, slug) {
+    const frame = getSyncFrame();
+    if (!frame) return;
+
+    const sendMessage = () => {
+      try {
+        frame.contentWindow.postMessage({ type: 'CB_DELETE_BLOG', id: id, slug: slug }, 'https://credbaba.com');
+      } catch (e) {}
+    };
+
+    if (frame.contentWindow && frame.contentWindow.document && frame.contentWindow.document.readyState === 'complete') {
+      sendMessage();
+    } else {
+      frame.onload = sendMessage;
     }
   }
 
@@ -160,15 +219,11 @@ const CredBabaBlogStore = (function () {
       .replace(/^-+|-+$/g, '');
   }
 
-  // Get all blogs (builtins + custom)
-  function getAllBlogs() {
-    const custom = getCustomBlogs();
-    const customSlugs = new Set(custom.map(b => b.slug));
-    
-    // Filter out builtins if overridden by custom with same slug
-    const filteredBuiltins = BUILTIN_BLOGS.filter(b => !customSlugs.has(b.slug));
-    
-    // Custom blogs first, sorted by updated/published date descending
+  // Merge custom blogs with builtins without duplicate slugs
+  function mergeWithBuiltins(customList) {
+    const custom = Array.isArray(customList) ? customList : [];
+    const customSlugs = new Set(custom.map(b => (b.slug || '').toLowerCase()));
+    const filteredBuiltins = BUILTIN_BLOGS.filter(b => !customSlugs.has(b.slug.toLowerCase()));
     const combined = [...custom, ...filteredBuiltins];
     return combined.sort((a, b) => {
       const dateA = new Date(a.updatedAt || a.publishedAt || 0).getTime();
@@ -177,18 +232,24 @@ const CredBabaBlogStore = (function () {
     });
   }
 
-  // Get only published blogs
+  // Get all blogs synchronously from local cache
+  function getAllBlogs() {
+    return mergeWithBuiltins(getCustomBlogs());
+  }
+
+  // Get only published blogs synchronously from local cache
   function getPublishedBlogs() {
-    return getAllBlogs().filter(b => b.status === 'published');
+    return getAllBlogs().filter(b => (b.status || '').toLowerCase() === 'published');
   }
 
-  // Get blog by slug or ID
+  // Get blog by slug synchronously from local cache
   function getBlogBySlug(slug) {
+    const clean = (slug || '').toString().toLowerCase().trim();
     const all = getAllBlogs();
-    return all.find(b => b.slug === slug || b.id === slug) || null;
+    return all.find(b => (b.slug || '').toLowerCase() === clean || (b.id || '') === clean) || null;
   }
 
-  // Save or update blog
+  // Save or update blog in local storage AND sync to Google Sheet (Option 1)
   async function saveBlog(blogData) {
     if (!blogData.title || !blogData.title.trim()) {
       throw new Error('Blog title is required.');
@@ -198,10 +259,11 @@ const CredBabaBlogStore = (function () {
     if (!slug) slug = 'blog-post-' + Date.now();
 
     const custom = getCustomBlogs();
-    const existingIndex = custom.findIndex(b => b.id === blogData.id || b.slug === slug);
+    const existingIndex = custom.findIndex(b => (blogData.id && b.id === blogData.id) || (b.slug && b.slug.toLowerCase() === slug));
 
     const now = new Date();
     const readTime = blogData.readTime || estimateReadTime(blogData.content);
+    const blogStatus = (blogData.status || 'published').toLowerCase().trim();
 
     const blogRecord = {
       id: blogData.id || 'blog_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
@@ -218,12 +280,11 @@ const CredBabaBlogStore = (function () {
       heroImage: blogData.heroImage || '',
       content: blogData.content || '',
       faqs: Array.isArray(blogData.faqs) ? blogData.faqs : [],
-      status: blogData.status || 'published', // 'published' or 'draft'
+      status: blogStatus, // 'published' or 'draft'
       url: `post.html?slug=${slug}`
     };
 
     if (existingIndex >= 0) {
-      // Preserve original creation date
       blogRecord.createdAt = custom[existingIndex].createdAt || blogRecord.publishedAt;
       custom[existingIndex] = blogRecord;
     } else {
@@ -231,101 +292,192 @@ const CredBabaBlogStore = (function () {
       custom.unshift(blogRecord);
     }
 
+    // 1. Update local storage & mirror to website
     saveCustomBlogs(custom);
     triggerCrossDomainSync(custom);
 
-    // Optional background sync to Apps Script if configured
+    // 2. Sync to Google Apps Script (Option 1)
     const settings = getSettings();
     if (settings.appsScriptUrl) {
       try {
-        fetch(settings.appsScriptUrl, {
+        const res = await fetch(settings.appsScriptUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({ action: 'saveBlog', blog: blogRecord })
-        }).catch(err => console.warn('Apps script sync failed:', err));
-      } catch (e) {
-        // ignore
+        });
+        if (res.ok) {
+          const respData = await res.json();
+          if (respData && respData.result === 'error') {
+            console.warn('Apps Script returned error:', respData.message);
+          }
+        }
+      } catch (err) {
+        console.warn('Google Apps Script save warning:', err);
       }
     }
 
     return blogRecord;
   }
 
-  // Asynchronously fetch blog by slug (checking local memory, blogs.json, or remote)
-  async function fetchBlogBySlug(slug) {
-    // 1. Check local
-    let blog = getBlogBySlug(slug);
-    if (blog && blog.content) {
-      return blog;
+  // Delete blog locally and from Google Sheet
+  async function deleteBlog(idOrSlug) {
+    if (!idOrSlug) return false;
+    const target = idOrSlug.toString().toLowerCase().trim();
+
+    // Check if it's a builtin
+    const isBuiltin = BUILTIN_BLOGS.some(b => b.id === target || b.slug.toLowerCase() === target);
+    if (isBuiltin) {
+      throw new Error('Built-in SEO cornerstone articles cannot be deleted directly.');
     }
 
-    // 2. Fetch from blog/data/blogs.json
-    try {
-      const basePath = window.location.pathname.includes('/blog/') ? 'data/blogs.json' : 'blog/data/blogs.json';
-      const res = await fetch(basePath + '?_t=' + Date.now());
-      if (res.ok) {
-        const remoteBlogs = await res.json();
-        if (Array.isArray(remoteBlogs)) {
-          const match = remoteBlogs.find(b => b.slug === slug || b.id === slug);
-          if (match) {
-            // Cache into local storage
-            const custom = getCustomBlogs();
-            if (!custom.some(b => b.slug === match.slug)) {
-              custom.unshift(match);
-              try { saveCustomBlogs(custom); } catch(e){}
-            }
-            return match;
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Could not fetch remote blogs.json:', e);
-    }
+    const custom = getCustomBlogs();
+    const blogToDelete = custom.find(b => (b.id && b.id.toLowerCase() === target) || (b.slug && b.slug.toLowerCase() === target));
+    const targetId = blogToDelete ? blogToDelete.id : idOrSlug;
+    const targetSlug = blogToDelete ? blogToDelete.slug : idOrSlug;
 
-    // 3. Optional Apps Script remote lookup if configured
+    const filtered = custom.filter(b => (b.id && b.id.toLowerCase() !== target) && (b.slug && b.slug.toLowerCase() !== target));
+
+    // Update local storage
+    saveCustomBlogs(filtered);
+    triggerCrossDomainSync(filtered);
+    triggerCrossDomainDelete(targetId, targetSlug);
+
+    // Delete from Google Sheet via Apps Script
     const settings = getSettings();
     if (settings.appsScriptUrl) {
       try {
-        const res = await fetch(settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(slug));
+        await fetch(settings.appsScriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'deleteBlog',
+            id: targetId,
+            slug: targetSlug
+          })
+        });
+      } catch (err) {
+        console.warn('Google Apps Script delete warning:', err);
+      }
+    }
+
+    return true;
+  }
+
+  // Toggle blog status between 'published' and 'draft'
+  async function toggleBlogStatus(idOrSlug) {
+    const blog = getBlogBySlug(idOrSlug);
+    if (!blog) throw new Error('Article not found.');
+    if (blog.isBuiltin) throw new Error('Cannot toggle status of built-in cornerstone articles.');
+
+    const newStatus = (blog.status === 'published') ? 'draft' : 'published';
+    blog.status = newStatus;
+    const saved = await saveBlog(blog);
+    return saved;
+  }
+
+  // Asynchronously fetch published blogs for public website (credba.com/blog/)
+  // Ensures drafts and deleted articles are NEVER shown
+  async function fetchPublishedBlogs() {
+    const settings = getSettings();
+
+    // 1. Fetch live published blogs from Google Apps Script (Option 1)
+    if (settings.appsScriptUrl) {
+      try {
+        const res = await fetch(settings.appsScriptUrl + '?action=getBlogs&_t=' + Date.now());
         if (res.ok) {
           const data = await res.json();
-          if (data && data.blog) {
-            return data.blog;
+          if (data && data.result === 'success' && Array.isArray(data.blogs)) {
+            // STRICT FILTER: Only published blogs from sheet
+            const publishedFromSheet = data.blogs.filter(b => (b.status || '').toLowerCase() === 'published');
+            // Update local cache with live truth
+            saveCustomBlogs(publishedFromSheet);
+            return mergeWithBuiltins(publishedFromSheet);
           }
         }
       } catch (e) {
-        // ignore
+        console.warn('Apps Script fetchPublishedBlogs failed, falling back to local cache:', e);
       }
     }
 
-    return blog || null;
+    // 2. Fallback: filter local custom blogs STRICTLY for published
+    const local = getCustomBlogs().filter(b => (b.status || '').toLowerCase() === 'published');
+    return mergeWithBuiltins(local);
   }
 
-  // Asynchronously fetch all published blogs (merging local with remote blogs.json)
-  async function fetchPublishedBlogs() {
-    let local = getPublishedBlogs();
-    try {
-      const basePath = window.location.pathname.includes('/blog/') ? 'data/blogs.json' : 'blog/data/blogs.json';
-      const res = await fetch(basePath + '?_t=' + Date.now());
-      if (res.ok) {
-        const remote = await res.json();
-        if (Array.isArray(remote)) {
-          const localSlugs = new Set(local.map(b => b.slug));
-          const newRemote = remote.filter(b => b.status === 'published' && !localSlugs.has(b.slug));
-          return [...local, ...newRemote].sort((a, b) => {
-            const dateA = new Date(a.publishedAt || 0).getTime();
-            const dateB = new Date(b.publishedAt || 0).getTime();
-            return dateB - dateA;
-          });
+  // Asynchronously fetch blog by slug for public reader (credbaba.com/blog/post.html?slug=...)
+  // Strictly blocks drafts from public view unless { includeDraft: true } is explicitly passed
+  async function fetchBlogBySlug(slug, options = {}) {
+    if (!slug) return null;
+    const cleanSlug = slug.toString().toLowerCase().trim();
+    const settings = getSettings();
+    const includeDraft = Boolean(options.includeDraft);
+
+    // Check if it's a builtin
+    const builtin = BUILTIN_BLOGS.find(b => b.slug.toLowerCase() === cleanSlug || b.id === cleanSlug);
+
+    // 1. Query live Google Apps Script if configured
+    if (settings.appsScriptUrl) {
+      try {
+        const previewQuery = includeDraft ? '&preview=1' : '';
+        const res = await fetch(settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.result === 'success' && data.blog) {
+            const status = (data.blog.status || '').toLowerCase();
+            if (status === 'published' || includeDraft) {
+              return data.blog;
+            }
+            // Article is in draft and public user is requesting: treat as not found
+            return null;
+          }
+          if (data && data.result === 'not_found') {
+            // Purge local cache of this deleted/draft article
+            purgeLocalBlog(cleanSlug);
+            return builtin || null;
+          }
         }
+      } catch (e) {
+        console.warn('Apps Script fetchBlogBySlug failed, falling back to local cache:', e);
       }
-    } catch (e) {
-      // ignore
     }
-    return local;
+
+    // 2. Fallback to local storage
+    const custom = getCustomBlogs();
+    const match = custom.find(b => (b.slug || '').toLowerCase() === cleanSlug || (b.id || '') === cleanSlug);
+    if (match) {
+      const matchStatus = (match.status || '').toLowerCase();
+      // STRICT: Only return if status is published or draft preview is allowed
+      if (matchStatus === 'published' || includeDraft) {
+        return match;
+      }
+      // Draft article requested without preview privileges: hidden from website!
+      return null;
+    }
+
+    return builtin || null;
   }
 
-  // Commit published blog directly to credbaba-website repo via GitHub REST API
+  // Asynchronously fetch ALL blogs (published + drafts) for Backoffice table
+  async function fetchAllBlogs() {
+    const settings = getSettings();
+    if (settings.appsScriptUrl) {
+      try {
+        const res = await fetch(settings.appsScriptUrl + '?action=getAllBlogs&_t=' + Date.now());
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.result === 'success' && Array.isArray(data.blogs)) {
+            saveCustomBlogs(data.blogs);
+            return mergeWithBuiltins(data.blogs);
+          }
+        }
+      } catch (e) {
+        console.warn('Apps Script fetchAllBlogs failed:', e);
+      }
+    }
+    return getAllBlogs();
+  }
+
+  // Legacy / optional GitHub publisher (kept for backup or manual repository commit)
   async function publishToGitHub(blog) {
     const settings = getSettings();
     const token = settings.githubToken;
@@ -334,7 +486,7 @@ const CredBabaBlogStore = (function () {
     const branch = settings.githubBranch || 'main';
 
     if (!token || !owner || !repo) {
-      throw new Error('GitHub API token not configured.');
+      throw new Error('GitHub API token not configured in Backoffice Settings.');
     }
 
     const apiHeaders = {
@@ -343,7 +495,6 @@ const CredBabaBlogStore = (function () {
       'Content-Type': 'application/json'
     };
 
-    // Step 1: Update blog/data/blogs.json
     let blogsList = [];
     let fileSha = null;
     try {
@@ -360,7 +511,6 @@ const CredBabaBlogStore = (function () {
       console.warn('Could not read existing blogs.json from GitHub:', e);
     }
 
-    // Merge blog into list
     const existingIndex = blogsList.findIndex(b => b.id === blog.id || b.slug === blog.slug);
     if (existingIndex >= 0) {
       blogsList[existingIndex] = blog;
@@ -393,23 +543,7 @@ const CredBabaBlogStore = (function () {
     };
   }
 
-  // Delete blog
-  function deleteBlog(idOrSlug) {
-    const custom = getCustomBlogs();
-    const filtered = custom.filter(b => b.id !== idOrSlug && b.slug !== idOrSlug);
-    if (filtered.length === custom.length) {
-      // Check if it's a builtin
-      const isBuiltin = BUILTIN_BLOGS.some(b => b.id === idOrSlug || b.slug === idOrSlug);
-      if (isBuiltin) {
-        throw new Error('Built-in SEO blogs cannot be deleted directly, but can be customized.');
-      }
-      return false;
-    }
-    saveCustomBlogs(filtered);
-    return true;
-  }
-
-  // Image compressor: handles massive camera/phone images, scales to web size, returns optimized dataURL
+  // Image compressor: scales to web size, returns optimized dataURL
   function compressImage(file, maxDimension = 1200, quality = 0.82) {
     return new Promise((resolve, reject) => {
       if (!file || !file.type.startsWith('image/')) {
@@ -437,13 +571,10 @@ const CredBabaBlogStore = (function () {
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
-          
-          // Smooth rendering
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Use WebP if supported, otherwise JPEG
           let outputType = 'image/jpeg';
           try {
             const testCanvas = document.createElement('canvas');
@@ -465,7 +596,7 @@ const CredBabaBlogStore = (function () {
     });
   }
 
-  // Generate a standalone static HTML file string matching CredBaba blog standards
+  // Generate static HTML export string matching CredBaba blog standards
   function generateStaticHtml(blog) {
     const formattedDate = new Date(blog.publishedAt || Date.now()).toLocaleDateString('en-US', {
       month: 'long',
@@ -507,56 +638,8 @@ const CredBabaBlogStore = (function () {
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/tokens.css">
 <link rel="stylesheet" href="../assets/css/site.css">
-<style>
-  .blog-post-header { padding: var(--space-9) 0 var(--space-5); max-width: 820px; }
-  .blog-post-header h1 { font-size: clamp(var(--text-2xl), 4vw, var(--text-4xl)); margin-bottom: var(--space-4); line-height: 1.25; }
-  .blog-meta { color: var(--color-ink-faint); font-size: var(--text-sm); margin-bottom: var(--space-4); }
-  .blog-intro { font-size: var(--text-lg); color: var(--color-ink-soft); line-height: 1.7; border-left: 3px solid var(--color-indigo); padding-left: var(--space-5); margin: var(--space-5) 0; }
-  .blog-content { max-width: 820px; padding-bottom: var(--space-10); font-size: var(--text-base); }
-  .blog-content h2 { font-size: var(--text-2xl); margin-top: var(--space-9); margin-bottom: var(--space-4); line-height: 1.3; }
-  .blog-content h3 { font-size: var(--text-xl); margin-top: var(--space-6); margin-bottom: var(--space-3); color: var(--color-ink); }
-  .blog-content h4 { font-size: var(--text-lg); margin-top: var(--space-5); margin-bottom: var(--space-2); }
-  .blog-content p { color: var(--color-ink-soft); line-height: 1.8; margin-bottom: var(--space-5); }
-  .blog-content ul, .blog-content ol { color: var(--color-ink-soft); line-height: 1.75; margin-bottom: var(--space-5); padding-left: 1.6em; }
-  .blog-content li { margin-bottom: var(--space-2); }
-  .blog-content strong { color: var(--color-ink); font-weight: 600; }
-  .blog-content blockquote { border-left: 4px solid var(--color-gold); background: var(--color-surface); padding: var(--space-4) var(--space-6); border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: var(--space-6) 0; color: var(--color-ink); font-style: italic; }
-  .breadcrumb { font-size: var(--text-sm); color: var(--color-ink-faint); margin-bottom: var(--space-4); }
-  .breadcrumb a { color: var(--color-indigo); text-decoration: none; }
-  .breadcrumb a:hover { text-decoration: underline; }
-  
-  /* Media styling */
-  .blog-content img, .blog-inline-img { max-width: 100%; height: auto; border-radius: var(--radius-md); margin: var(--space-6) 0; border: 1px solid var(--color-border); display: block; }
-  .blog-content img.align-center { margin-left: auto; margin-right: auto; }
-  .blog-content img.align-left { float: left; margin: var(--space-2) var(--space-5) var(--space-4) 0; max-width: 48%; }
-  .blog-content img.align-right { float: right; margin: var(--space-2) 0 var(--space-4) var(--space-5); max-width: 48%; }
-  .blog-content figure { margin: var(--space-6) 0; }
-  .blog-content figcaption { font-size: var(--text-xs); color: var(--color-ink-faint); text-align: center; margin-top: var(--space-2); font-family: var(--font-mono); }
-  
-  /* CredBaba special components */
-  .summary-box { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-6); margin: var(--space-6) 0; }
-  .summary-box h3 { margin-top: 0; color: var(--color-indigo); }
-  .blog-cta { background: var(--color-indigo); border-radius: var(--radius-lg); padding: var(--space-8); text-align: center; margin: var(--space-9) 0; color: #fff; }
-  .blog-cta h2 { color: #fff; margin-bottom: var(--space-3); margin-top: 0; }
-  .blog-cta p { color: rgba(255,255,255,0.85); margin-bottom: var(--space-5); font-size: var(--text-base); }
-  .blog-cta .btn { background: #fff; color: var(--color-indigo); font-weight: 600; text-decoration: none; display: inline-block; padding: 12px 24px; border-radius: var(--radius-md); }
-  .blog-cta .btn:hover { background: rgba(255,255,255,0.92); }
-
-  /* Accordions */
-  .faq-item { border-bottom: 1px solid var(--color-border); }
-  .faq-item:first-of-type { border-top: 1px solid var(--color-border); }
-  .faq-question { width: 100%; background: none; border: none; text-align: left; padding: var(--space-5) 0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); color: var(--color-ink); font-family: var(--font-display); font-size: var(--text-base); font-weight: 600; line-height: 1.4; }
-  .faq-question:hover { color: var(--color-indigo); }
-  .faq-icon { flex-shrink: 0; width: 20px; height: 20px; transition: transform 0.2s ease; }
-  .faq-item.open .faq-icon { transform: rotate(45deg); }
-  .faq-answer { display: none; padding-bottom: var(--space-5); color: var(--color-ink-soft); line-height: 1.7; }
-  .faq-item.open .faq-answer { display: block; }
-  
-  .blog-disclaimer { color: var(--color-ink-faint); font-size: var(--text-xs); line-height: 1.6; border-top: 1px solid var(--color-border); padding-top: var(--space-6); margin-top: var(--space-8); }
-</style>
 </head>
 <body>
-
 <header class="site-header">
   <div class="container">
     <a href="../index.html" class="brand"><span class="brand-mark">CB</span>CredBaba</a>
@@ -569,26 +652,8 @@ const CredBabaBlogStore = (function () {
         <a href="index.html" class="active">Blog</a>
       </div>
     </nav>
-    <div class="header-actions">
-      <a href="../business-loan/" class="btn btn-primary header-cta">Apply Now</a>
-      <button class="theme-toggle" data-theme-toggle aria-label="Toggle dark mode" aria-pressed="false">
-        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-      </button>
-      <button class="nav-toggle" id="navToggle" aria-label="Open menu" aria-expanded="false">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
-      </button>
-    </div>
-  </div>
-  <div class="mobile-menu" id="mobileMenu">
-    <a href="../index.html">Home</a>
-    <a href="../home-loan/">Home Loan</a>
-    <a href="../personal-loan/">Personal Loan</a>
-    <a href="../business-loan/">Business Loan</a>
-    <a href="index.html">Blog</a>
   </div>
 </header>
-
 <main class="container">
   <div class="blog-post-header">
     <div class="breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Blog</a> / ${escapeHtml(blog.title)}</div>
@@ -596,56 +661,32 @@ const CredBabaBlogStore = (function () {
     <h1>${escapeHtml(blog.title)}</h1>
     <div class="blog-meta">By ${escapeHtml(blog.author)} &nbsp;·&nbsp; ${blog.readTime}</div>
   </div>
-
   ${heroImageHtml}
-
   <div class="blog-content">
     ${blog.excerpt ? `<div class="blog-intro">${escapeHtml(blog.excerpt)}</div>` : ''}
-    
     ${blog.content}
-
     ${faqItemsHtml ? `<h2>Frequently Asked Questions</h2>\n${faqItemsHtml}` : ''}
-
     <div class="blog-cta">
       <h2>Explore Low Interest Loan Options with CredBaba</h2>
       <p>Submit your loan inquiry online in 2 minutes. Transparent options, fast approvals, zero spam.</p>
       <a href="../business-loan/" class="btn">Apply Online Today →</a>
     </div>
-
-    <p class="blog-disclaimer">The information in this article is for general educational purposes only and does not constitute financial or legal advice. Interest rates, fees and loan terms vary by lender and applicant profile. CredBaba is a digital loan facilitation service (DSA) and does not directly lend money.</p>
   </div>
 </main>
-
 <footer class="site-footer">
   <div class="container">
     <div class="ledger-line"></div>
     <div class="footer-bottom">
       <span>© 2026 CredBaba. All rights reserved.</span>
-      <span><a href="../pages/loans.html">Explore Loans</a> · <a href="../pages/faq.html">FAQs</a> · <a href="../pages/privacy.html">Privacy</a> · <a href="../pages/terms.html">Terms</a></span>
     </div>
   </div>
 </footer>
-
 <script src="../assets/js/theme.js"></script>
-<script>
-  document.getElementById('navToggle').addEventListener('click', function () {
-    var menu = document.getElementById('mobileMenu');
-    var open = menu.classList.toggle('open');
-    this.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-  document.querySelectorAll('.faq-question').forEach(function(btn) {
-    btn.addEventListener('click', function() {
-      var item = this.closest('.faq-item');
-      var isOpen = item.classList.toggle('open');
-      this.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    });
-  });
-</script>
 </body>
 </html>`;
   }
 
-  // Download static HTML file directly in browser
+  // Download static HTML file in browser
   function downloadBlogHtml(blog) {
     const html = generateStaticHtml(blog);
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
@@ -675,10 +716,13 @@ const CredBabaBlogStore = (function () {
     getBlogBySlug,
     fetchBlogBySlug,
     fetchPublishedBlogs,
+    fetchAllBlogs,
     publishToGitHub,
     triggerCrossDomainSync,
+    triggerCrossDomainSettingsSync,
     saveBlog,
     deleteBlog,
+    toggleBlogStatus,
     compressImage,
     generateStaticHtml,
     downloadBlogHtml,

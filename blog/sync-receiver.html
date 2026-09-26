@@ -28,6 +28,7 @@
       const data = event.data;
       if (!data || typeof data !== 'object') return;
 
+      // Sync blog array
       if (data.type === 'CB_SYNC_BLOGS' && Array.isArray(data.blogs)) {
         try {
           localStorage.setItem('credbaba_custom_blogs', JSON.stringify(data.blogs));
@@ -36,6 +37,32 @@
           }
         } catch (e) {
           console.warn('[SyncReceiver] Failed to store blogs:', e);
+        }
+      }
+
+      // Sync settings (e.g. appsScriptUrl)
+      if (data.type === 'CB_SYNC_SETTINGS' && data.settings) {
+        try {
+          localStorage.setItem('credbaba_admin_settings', JSON.stringify(data.settings));
+          if (event.source) {
+            event.source.postMessage({ type: 'CB_SYNC_SETTINGS_ACK', success: true }, event.origin);
+          }
+        } catch (e) {
+          console.warn('[SyncReceiver] Failed to store settings:', e);
+        }
+      }
+
+      // Specific delete action
+      if (data.type === 'CB_DELETE_BLOG' && (data.slug || data.id)) {
+        try {
+          const raw = localStorage.getItem('credbaba_custom_blogs');
+          if (raw) {
+            const blogs = JSON.parse(raw);
+            const filtered = blogs.filter(b => b.slug !== data.slug && b.id !== data.id);
+            localStorage.setItem('credbaba_custom_blogs', JSON.stringify(filtered));
+          }
+        } catch (e) {
+          console.warn('[SyncReceiver] Failed to delete blog:', e);
         }
       }
     });

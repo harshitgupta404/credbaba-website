@@ -1,26 +1,5 @@
 [
   {
-    "id": "test-test-test",
-    "isBuiltin": false,
-    "slug": "test-test-test",
-    "title": "Test Blog: Published from CredBaba Backoffice",
-    "category": "Loan Guide",
-    "author": "CredBaba Editorial Team",
-    "publishedAt": "2026-09-26",
-    "readTime": "3 min read",
-    "excerpt": "This is a published test article created from the CredBaba backoffice console to verify live publishing and website synchronization.",
-    "heroImage": "",
-    "content": "<p>Welcome to CredBaba! This article confirms that the backoffice blog publishing pipeline is fully operational.</p><p>You can edit this article anytime from the <strong>Backoffice Editor</strong>, format rich text, insert custom loan CTAs, and upload hero images.</p>",
-    "faqs": [
-      {
-        "q": "How do newly published blogs reach the website?",
-        "a": "Blogs published in the backoffice are saved in the central blog directory and synced across credbaba.com so all visitors can read them."
-      }
-    ],
-    "status": "published",
-    "url": "post.html?slug=test-test-test"
-  },
-  {
     "id": "builtin-1",
     "isBuiltin": true,
     "slug": "best-home-loan-options-india-interest-rates-tenure",
