@@ -254,26 +254,28 @@ function handleRequest(e, method) {
     let sheet = getBlogsSheet(ss);
 
     // ACTION: getBlogs (Used by public website credbaba.com/blog/)
-    // Returns ONLY blogs with Status === 'published' with RAM cache
+    // Returns lightweight blog cards with RAM cache (omits heavy content for instant transfer)
     if (action === 'getBlogs') {
       const cached = getFromCache('published_blogs');
       if (cached) {
         return jsonResponse(cached);
       }
 
-      const data = sheet.getDataRange().getValues();
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) {
+        const emptyRes = { result: 'success', blogs: [], total: 0 };
+        return jsonResponse(emptyRes);
+      }
+
+      const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
       const blogs = [];
 
-      for (let i = 1; i < data.length; i++) {
+      for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const status = (row[12] || '').toString().toLowerCase().trim();
 
         if (status === 'published') {
-          let faqs = [];
-          try {
-            if (row[11]) faqs = JSON.parse(row[11]);
-          } catch (err) {}
-
+          // Exclude heavy content (row[10]) to keep payload ultra-fast (< 5KB)
           blogs.push({
             id: row[0],
             title: row[1],
@@ -285,8 +287,6 @@ function handleRequest(e, method) {
             excerpt: row[7],
             metaDescription: row[8],
             heroImage: row[9],
-            content: row[10],
-            faqs: faqs,
             status: 'published',
             updatedAt: row[13]
           });
@@ -299,6 +299,7 @@ function handleRequest(e, method) {
     }
 
     // ACTION: getBlog (Used by public reader credbaba.com/blog/<slug>)
+    // Targeted single-row lookup using TextFinder + multi-chunk RAM CacheService
     if (action === 'getBlog') {
       const slug = (params.slug || payload.slug || '').toString().toLowerCase().trim();
       const id = (params.id || payload.id || '').toString().trim();
@@ -316,68 +317,45 @@ function handleRequest(e, method) {
         }
       }
 
-      const data = sheet.getDataRange().getValues();
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
-        const rowId = (row[0] || '').toString().trim();
-        const rowSlug = (row[2] || '').toString().toLowerCase().trim();
-        const status = (row[12] || '').toString().toLowerCase().trim();
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) {
+        return jsonResponse({ result: 'not_found', message: 'Article not found' });
+      }
 
-        if (rowSlug === slug || (id && rowId === id)) {
-          if (status !== 'published' && !includeDraft) {
-            return jsonResponse({
-              result: 'not_found',
-              message: 'Article is currently unpublished or in draft.'
-            });
-          }
-
-          let faqs = [];
-          try {
-            if (row[11]) faqs = JSON.parse(row[11]);
-          } catch (err) {}
-
-          const blogData = {
-            id: row[0],
-            title: row[1],
-            slug: row[2],
-            category: row[3],
-            author: row[4],
-            publishedAt: formatDate(row[5]),
-            readTime: row[6],
-            excerpt: row[7],
-            metaDescription: row[8],
-            heroImage: row[9],
-            content: row[10],
-            faqs: faqs,
-            status: status,
-            updatedAt: row[13]
-          };
-
-          const resObj = { result: 'success', blog: blogData };
-          if (status === 'published' && !includeDraft) {
-            putInCache(cacheKey, resObj, 21600);
-          }
-
-          return jsonResponse(resObj);
+      let foundRow = -1;
+      // Fast C++ indexed search on Column C (Slug)
+      if (slug) {
+        const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(slug).matchEntireCell(true).findNext();
+        if (cell) {
+          foundRow = cell.getRow();
+        }
+      }
+      // Fallback search on Column A (ID)
+      if (foundRow === -1 && id) {
+        const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(id).matchEntireCell(true).findNext();
+        if (cell) {
+          foundRow = cell.getRow();
         }
       }
 
-      return jsonResponse({ result: 'not_found', message: 'Article not found' });
-    }
+      if (foundRow > 1) {
+        // Read ONLY the matching row (14 columns) instead of the entire sheet
+        const row = sheet.getRange(foundRow, 1, 1, 14).getValues()[0];
+        const status = (row[12] || '').toString().toLowerCase().trim();
 
-    // ACTION: getAllBlogs (Used by Backoffice blogs.html table)
-    if (action === 'getAllBlogs') {
-      const data = sheet.getDataRange().getValues();
-      const blogs = [];
+        if (status !== 'published' && !includeDraft) {
+          return jsonResponse({
+            result: 'not_found',
+            message: 'Article is currently unpublished or in draft.'
+          });
+        }
 
-      for (let i = 1; i < data.length; i++) {
-        const row = data[i];
         let faqs = [];
         try {
           if (row[11]) faqs = JSON.parse(row[11]);
         } catch (err) {}
 
-        blogs.push({
+        const blogData = {
           id: row[0],
           title: row[1],
           slug: row[2],
@@ -390,12 +368,73 @@ function handleRequest(e, method) {
           heroImage: row[9],
           content: row[10],
           faqs: faqs,
+          status: status,
+          updatedAt: row[13]
+        };
+
+        const resObj = { result: 'success', blog: blogData };
+        if (status === 'published' && !includeDraft) {
+          putInCache(cacheKey, resObj, 21600);
+          if (slug && row[0]) {
+            putInCache('blog_' + row[0], resObj, 21600);
+          }
+        }
+
+        return jsonResponse(resObj);
+      }
+
+      return jsonResponse({ result: 'not_found', message: 'Article not found' });
+    }
+
+    // ACTION: getAllBlogs (Used by Backoffice blogs.html table)
+    // Returns lightweight list without heavy HTML unless includeContent=1 is explicitly requested
+    if (action === 'getAllBlogs') {
+      const includeContent = params.includeContent === '1' || payload.includeContent === '1';
+      if (!includeContent) {
+        const cached = getFromCache('all_blogs');
+        if (cached) {
+          return jsonResponse(cached);
+        }
+      }
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow <= 1) {
+        return jsonResponse({ result: 'success', blogs: [], total: 0 });
+      }
+
+      const data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
+      const blogs = [];
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        let faqs = [];
+        if (includeContent && row[11]) {
+          try { faqs = JSON.parse(row[11]); } catch (err) {}
+        }
+
+        blogs.push({
+          id: row[0],
+          title: row[1],
+          slug: row[2],
+          category: row[3],
+          author: row[4],
+          publishedAt: formatDate(row[5]),
+          readTime: row[6],
+          excerpt: row[7],
+          metaDescription: row[8],
+          heroImage: row[9],
+          content: includeContent ? row[10] : '',
+          faqs: faqs,
           status: (row[12] || 'draft').toString().toLowerCase().trim(),
           updatedAt: row[13]
         });
       }
 
-      return jsonResponse({ result: 'success', blogs: blogs, total: blogs.length });
+      const resObj = { result: 'success', blogs: blogs, total: blogs.length };
+      if (!includeContent) {
+        putInCache('all_blogs', resObj, 7200);
+      }
+      return jsonResponse(resObj);
     }
 
     // ACTION: saveBlog (Save Draft or Publish from Backoffice)
@@ -405,28 +444,53 @@ function handleRequest(e, method) {
         return jsonResponse({ result: 'error', message: 'Missing title or slug' });
       }
 
-      const data = sheet.getDataRange().getValues();
-      let foundRow = -1;
-
       const targetId = (b.id || '').toString().trim();
       const targetSlug = (b.slug || '').toString().toLowerCase().trim();
 
-      for (let i = 1; i < data.length; i++) {
-        const rowId = (data[i][0] || '').toString().trim();
-        const rowSlug = (data[i][2] || '').toString().toLowerCase().trim();
+      const lastRow = sheet.getLastRow();
+      let foundRow = -1;
 
-        if ((targetId && rowId === targetId) || (targetSlug && rowSlug === targetSlug)) {
-          foundRow = i + 1;
-          break;
+      if (lastRow > 1) {
+        if (targetSlug) {
+          const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetSlug).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
+        }
+        if (foundRow === -1 && targetId) {
+          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
         }
       }
 
       const blogStatus = (b.status || 'published').toString().toLowerCase().trim();
 
+      // Optimize base64 hero images by uploading to Google Drive CDN if base64 detected
+      if (b.heroImage && typeof b.heroImage === 'string' && b.heroImage.indexOf('data:image') === 0) {
+        try {
+          const parts = b.heroImage.split(',');
+          const mimeMatch = parts[0].match(/:(.*?);/);
+          const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+          const decoded = Utilities.base64Decode(parts[1]);
+          const ext = (mimeType.split('/')[1] || 'jpg').replace('+xml', '');
+          const cleanName = targetSlug.replace(/[^a-z0-9_-]/gi, '_') || 'hero';
+          const blob = Utilities.newBlob(decoded, mimeType, cleanName + '-' + Date.now() + '.' + ext);
+
+          const folder = getBlogImagesFolder();
+          if (folder) {
+            const file = folder.createFile(blob);
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            // High-speed Google CDN format for Drive file
+            b.heroImage = 'https://lh3.googleusercontent.com/d/' + file.getId();
+          }
+        } catch (driveErr) {
+          Logger.log('Drive upload fallback: ' + driveErr);
+        }
+      }
+
+      const rowId = b.id || Utilities.getUuid();
       const rowValues = [
-        b.id || Utilities.getUuid(),
+        rowId,
         b.title || '',
-        b.slug || '',
+        targetSlug,
         b.category || 'Loan Guide',
         b.author || 'CredBaba Editorial Team',
         b.publishedAt || new Date().toISOString().split('T')[0],
@@ -440,24 +504,48 @@ function handleRequest(e, method) {
         new Date().toISOString()
       ];
 
-      if (foundRow > 0) {
+      if (foundRow > 1) {
         sheet.getRange(foundRow, 1, 1, rowValues.length).setValues([rowValues]);
       } else {
         sheet.appendRow(rowValues);
+        foundRow = sheet.getLastRow();
       }
 
-      // Invalidate RAM cache so fresh changes are visible immediately
-      clearCacheKeys(['published_blogs', 'blog_' + targetSlug, 'blog_' + targetId]);
+      // Invalidate existing caches
+      clearCacheKeys(['published_blogs', 'all_blogs', 'blog_' + targetSlug, 'blog_' + targetId, 'blog_' + rowId]);
+
+      const savedBlogData = {
+        id: rowId,
+        title: b.title,
+        slug: targetSlug,
+        category: b.category || 'Loan Guide',
+        author: b.author || 'CredBaba Editorial Team',
+        publishedAt: formatDate(rowValues[5]),
+        readTime: b.readTime || '5 min read',
+        excerpt: b.excerpt || '',
+        metaDescription: rowValues[8],
+        heroImage: b.heroImage || '',
+        content: b.content || '',
+        faqs: b.faqs || [],
+        status: blogStatus,
+        updatedAt: rowValues[13]
+      };
+
+      // Prime RAM cache immediately if published so first visitor loads in milliseconds
+      if (blogStatus === 'published') {
+        putInCache('blog_' + targetSlug, { result: 'success', blog: savedBlogData }, 21600);
+        putInCache('blog_' + rowId, { result: 'success', blog: savedBlogData }, 21600);
+      }
 
       return jsonResponse({
         result: 'success',
-        blog: b,
+        blog: savedBlogData,
         status: blogStatus,
-        row: foundRow > 0 ? foundRow : sheet.getLastRow()
+        row: foundRow
       });
     }
 
-    // ACTION: deleteBlog (Deletes blog row from Sheet)
+    // ACTION: deleteBlog (Deletes blog row from Sheet using TextFinder)
     if (action === 'deleteBlog') {
       const targetSlug = (payload.slug || params.slug || '').toString().toLowerCase().trim();
       const targetId = (payload.id || params.id || '').toString().trim();
@@ -466,22 +554,28 @@ function handleRequest(e, method) {
         return jsonResponse({ result: 'error', message: 'Missing slug or id to delete' });
       }
 
-      const data = sheet.getDataRange().getValues();
-      let deleted = false;
+      const lastRow = sheet.getLastRow();
+      let foundRow = -1;
 
-      for (let i = data.length - 1; i >= 1; i--) {
-        const rowId = (data[i][0] || '').toString().trim();
-        const rowSlug = (data[i][2] || '').toString().toLowerCase().trim();
-
-        if ((targetId && rowId === targetId) || (targetSlug && rowSlug === targetSlug)) {
-          sheet.deleteRow(i + 1);
-          deleted = true;
-          break;
+      if (lastRow > 1) {
+        if (targetSlug) {
+          const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetSlug).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
+        }
+        if (foundRow === -1 && targetId) {
+          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
         }
       }
 
+      let deleted = false;
+      if (foundRow > 1) {
+        sheet.deleteRow(foundRow);
+        deleted = true;
+      }
+
       // Invalidate RAM cache
-      clearCacheKeys(['published_blogs', 'blog_' + targetSlug, 'blog_' + targetId]);
+      clearCacheKeys(['published_blogs', 'all_blogs', 'blog_' + targetSlug, 'blog_' + targetId]);
 
       return jsonResponse({ result: 'success', deleted: deleted, target: targetSlug || targetId });
     }
@@ -576,32 +670,99 @@ function jsonResponse(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// In-Memory High Speed Caching Helpers (RAM CacheService)
-function getFromCache(key) {
-  try {
-    const cache = CacheService.getScriptCache();
-    const raw = cache.get(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch (e) {
-    return null;
-  }
-}
+// Multi-Chunk High-Speed In-Memory RAM Caching Helpers (CacheService)
+// Google Apps Script limits single cache entries to 100KB. 
+// These helpers split payloads > 85KB across indexed chunks so even 500KB articles are cached in RAM.
+const CACHE_CHUNK_SIZE = 85000;
 
 function putInCache(key, obj, ttlSeconds) {
   try {
     const cache = CacheService.getScriptCache();
     const str = JSON.stringify(obj);
-    if (str.length < 95000) {
-      cache.put(key, str, ttlSeconds || 21600);
+    const ttl = ttlSeconds || 21600; // 6 hours default
+
+    if (str.length < CACHE_CHUNK_SIZE) {
+      cache.put(key, str, ttl);
+      cache.remove(key + '_chunks');
+      return;
     }
-  } catch (e) {}
+
+    const numChunks = Math.ceil(str.length / CACHE_CHUNK_SIZE);
+    const entries = {};
+    entries[key + '_chunks'] = String(numChunks);
+    for (let i = 0; i < numChunks; i++) {
+      entries[key + '_c' + i] = str.substring(i * CACHE_CHUNK_SIZE, (i + 1) * CACHE_CHUNK_SIZE);
+    }
+    cache.putAll(entries, ttl);
+    cache.remove(key);
+  } catch (e) {
+    Logger.log('putInCache error: ' + e);
+  }
+}
+
+function getFromCache(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get(key);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+
+    const numChunksStr = cache.get(key + '_chunks');
+    if (!numChunksStr) return null;
+
+    const numChunks = parseInt(numChunksStr, 10);
+    if (isNaN(numChunks) || numChunks <= 0) return null;
+
+    const chunkKeys = [];
+    for (let i = 0; i < numChunks; i++) {
+      chunkKeys.push(key + '_c' + i);
+    }
+
+    const chunks = cache.getAll(chunkKeys);
+    let fullStr = '';
+    for (let i = 0; i < numChunks; i++) {
+      const part = chunks[key + '_c' + i];
+      if (!part) return null; // Incomplete chunk, treat as cache miss
+      fullStr += part;
+    }
+
+    return JSON.parse(fullStr);
+  } catch (e) {
+    return null;
+  }
 }
 
 function clearCacheKeys(keys) {
   try {
     const cache = CacheService.getScriptCache();
-    if (Array.isArray(keys) && keys.length > 0) {
-      cache.removeAll(keys.filter(Boolean));
-    }
+    if (!Array.isArray(keys) || keys.length === 0) return;
+    const toRemove = [];
+    keys.forEach(function (k) {
+      if (!k) return;
+      toRemove.push(k);
+      toRemove.push(k + '_chunks');
+      for (let i = 0; i < 20; i++) {
+        toRemove.push(k + '_c' + i);
+      }
+    });
+    cache.removeAll(toRemove);
   } catch (e) {}
+}
+
+// Drive image helper to prevent spreadsheet cell bloat
+function getBlogImagesFolder() {
+  try {
+    const folderName = 'CredBaba Blog Images';
+    const folders = DriveApp.getFoldersByName(folderName);
+    if (folders.hasNext()) {
+      return folders.next();
+    }
+    const newFolder = DriveApp.createFolder(folderName);
+    newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return newFolder;
+  } catch (e) {
+    Logger.log('getBlogImagesFolder error: ' + e);
+    return null;
+  }
 }

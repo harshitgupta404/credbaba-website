@@ -496,10 +496,10 @@ const CredBabaBlogStore = (function () {
       }
     } catch (e) {}
 
-    // 3. Fallback to live Google Apps Script with a STRICT 2.5s timeout (never hangs)
+    // 3. Fallback to live Google Apps Script with 6.5s timeout (prevents cold-start timeout)
     if (settings.appsScriptUrl) {
       try {
-        const res = await fetchWithTimeout(settings.appsScriptUrl + '?action=getBlogs&_t=' + Date.now(), {}, 2500);
+        const res = await fetchWithTimeout(settings.appsScriptUrl + '?action=getBlogs&_t=' + Date.now(), {}, 6500);
         if (res.ok) {
           const data = await res.json();
           if (data && data.result === 'success' && Array.isArray(data.blogs)) {
@@ -520,7 +520,7 @@ const CredBabaBlogStore = (function () {
   // Guaranteed SUB-SECOND fetch:
   // Tier 1: Local / Built-in cache (0ms instant return + background cloud revalidation)
   // Tier 2: Static Edge CDN /blog/data/blogs.json (~30-80ms)
-  // Tier 3: Live Apps Script with STRICT 2.5s hard timeout (never hangs 5-10 minutes!)
+  // Tier 3: Live Apps Script with 6.5s hard timeout
   async function fetchBlogBySlug(slug, options = {}) {
     if (!slug) return null;
     const cleanSlug = slug.toString().toLowerCase().trim();
@@ -575,14 +575,14 @@ const CredBabaBlogStore = (function () {
       }
     } catch (e) {}
 
-    // TIER 3: Cloud Apps Script with STRICT 2.5s Hard Timeout (Never hangs 5-10 minutes!)
+    // TIER 3: Cloud Apps Script with 6.5s Timeout
     if (settings.appsScriptUrl) {
       try {
         const previewQuery = includeDraft ? '&preview=1' : '';
         const res = await fetchWithTimeout(
           settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now(),
           {},
-          2500
+          6500
         );
         if (res.ok) {
           const data = await res.json();
