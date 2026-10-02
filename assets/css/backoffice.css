@@ -629,9 +629,10 @@
   cursor: text;
 }
 
-/* Editorial formatting within editor */
-.editor-content-area h1 {
-  font-size: var(--text-3xl);
+/* Editorial formatting within editor and preview */
+.editor-content-area h1,
+.blog-content h1 {
+  font-size: 26px;
   font-family: var(--font-display);
   font-weight: 700;
   margin-top: var(--space-7);
@@ -640,8 +641,9 @@
   line-height: 1.25;
 }
 
-.editor-content-area h2 {
-  font-size: var(--text-2xl);
+.editor-content-area h2,
+.blog-content h2 {
+  font-size: 24px;
   font-family: var(--font-display);
   font-weight: 700;
   margin-top: var(--space-6);
@@ -650,8 +652,9 @@
   line-height: 1.3;
 }
 
-.editor-content-area h3 {
-  font-size: var(--text-xl);
+.editor-content-area h3,
+.blog-content h3 {
+  font-size: 22px;
   font-family: var(--font-display);
   font-weight: 600;
   margin-top: var(--space-5);
