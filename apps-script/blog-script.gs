@@ -330,9 +330,17 @@ function handleRequest(e, method) {
           foundRow = cell.getRow();
         }
       }
-      // Fallback search on Column A (ID)
+      // Fallback search on Column A (ID) with id or slug (in case an ID was passed as slug)
+      if (foundRow === -1 && (id || slug)) {
+        const targetId = id || slug;
+        const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
+        if (cell) {
+          foundRow = cell.getRow();
+        }
+      }
+      // Fallback search on Column C (Slug) with id
       if (foundRow === -1 && id) {
-        const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(id).matchEntireCell(true).findNext();
+        const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(id).matchEntireCell(true).findNext();
         if (cell) {
           foundRow = cell.getRow();
         }
@@ -455,8 +463,13 @@ function handleRequest(e, method) {
           const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetSlug).matchEntireCell(true).findNext();
           if (cell) foundRow = cell.getRow();
         }
+        if (foundRow === -1 && (targetId || targetSlug)) {
+          const qId = targetId || targetSlug;
+          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(qId).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
+        }
         if (foundRow === -1 && targetId) {
-          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
+          const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
           if (cell) foundRow = cell.getRow();
         }
       }
@@ -562,8 +575,13 @@ function handleRequest(e, method) {
           const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetSlug).matchEntireCell(true).findNext();
           if (cell) foundRow = cell.getRow();
         }
+        if (foundRow === -1 && (targetId || targetSlug)) {
+          const qId = targetId || targetSlug;
+          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(qId).matchEntireCell(true).findNext();
+          if (cell) foundRow = cell.getRow();
+        }
         if (foundRow === -1 && targetId) {
-          const cell = sheet.getRange(2, 1, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
+          const cell = sheet.getRange(2, 3, lastRow - 1, 1).createTextFinder(targetId).matchEntireCell(true).findNext();
           if (cell) foundRow = cell.getRow();
         }
       }

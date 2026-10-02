@@ -409,18 +409,54 @@ const CredBabaBlogStore = (function () {
     return saved;
   }
 
-  // Helper to merge lists of custom blogs without duplicate slugs
+  // Helper to merge lists of custom blogs without duplicate slugs or IDs, preserving full article content & FAQs
   function mergeCustomLists(primary, secondary) {
     const map = new Map();
+    const existingById = new Map();
+    const existingBySlug = new Map();
+
     (secondary || []).forEach(b => {
-      const key = (b.slug || b.id || '').toLowerCase();
-      if (key) map.set(key, b);
+      if (!b) return;
+      if (b.id) existingById.set(b.id, b);
+      if (b.slug) existingBySlug.set((b.slug || '').toLowerCase().trim(), b);
     });
+
     (primary || []).forEach(b => {
-      const key = (b.slug || b.id || '').toLowerCase();
-      if (key) map.set(key, b);
+      if (!b) return;
+      const bSlug = (b.slug || '').toLowerCase().trim();
+      const existing = (b.id ? existingById.get(b.id) : null) || (bSlug ? existingBySlug.get(bSlug) : null);
+
+      let merged = b;
+      if (existing) {
+        merged = {
+          ...existing,
+          ...b,
+          // If incoming lightweight summary has empty content/faqs, preserve full existing content/faqs
+          content: (b.content && b.content.trim()) ? b.content : (existing.content || ''),
+          faqs: (Array.isArray(b.faqs) && b.faqs.length > 0) ? b.faqs : (existing.faqs || [])
+        };
+      }
+
+      const key = b.id || bSlug || ('item_' + Math.random());
+      map.set(key, merged);
     });
-    return Array.from(map.values());
+
+    // Also preserve any existing blogs that were in secondary but not in primary (e.g. offline drafts)
+    (secondary || []).forEach(b => {
+      if (!b) return;
+      const bSlug = (b.slug || '').toLowerCase().trim();
+      const alreadyInMap = (b.id && map.has(b.id)) || (bSlug && map.has(bSlug));
+      if (!alreadyInMap) {
+        const key = b.id || bSlug;
+        if (key) map.set(key, b);
+      }
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.publishedAt || 0).getTime();
+      const dateB = new Date(b.updatedAt || b.publishedAt || 0).getTime();
+      return dateB - dateA;
+    });
   }
 
   // High-performance fetch wrapper with AbortController timeout to guarantee sub-second fallbacks
@@ -447,7 +483,7 @@ const CredBabaBlogStore = (function () {
     try {
       const previewQuery = includeDraft ? '&preview=1' : '';
       const res = await fetchWithTimeout(
-        settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now(),
+        settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + '&id=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now(),
         {},
         4000
       );
@@ -455,14 +491,15 @@ const CredBabaBlogStore = (function () {
         const data = await res.json();
         if (data && data.result === 'success' && data.blog) {
           const custom = getCustomBlogs();
-          const idx = custom.findIndex(b => (b.slug || '').toLowerCase() === cleanSlug || b.id === data.blog.id);
+          const targetSlug = (data.blog.slug || cleanSlug).toLowerCase();
+          const idx = custom.findIndex(b => (b.slug || '').toLowerCase() === targetSlug || b.id === data.blog.id || (b.slug || '').toLowerCase() === cleanSlug);
           if (idx >= 0) {
-            custom[idx] = data.blog;
+            custom[idx] = { ...custom[idx], ...data.blog };
           } else {
             custom.unshift(data.blog);
           }
           saveCustomBlogs(custom);
-        } else if (data && data.result === 'not_found') {
+        } else if (data && data.result === 'not_found' && !includeDraft) {
           purgeLocalBlog(cleanSlug);
         }
       }
@@ -504,8 +541,9 @@ const CredBabaBlogStore = (function () {
           const data = await res.json();
           if (data && data.result === 'success' && Array.isArray(data.blogs)) {
             const publishedFromSheet = data.blogs.filter(b => (b.status || '').toLowerCase() === 'published');
-            saveCustomBlogs(publishedFromSheet);
-            return mergeWithBuiltins(publishedFromSheet);
+            const merged = mergeCustomLists(publishedFromSheet, getCustomBlogs());
+            saveCustomBlogs(merged);
+            return mergeWithBuiltins(merged.filter(b => (b.status || '').toLowerCase() === 'published'));
           }
         }
       } catch (e) {
@@ -516,10 +554,10 @@ const CredBabaBlogStore = (function () {
     return localCombined;
   }
 
-  // Asynchronously fetch blog by slug for public reader (credbaba.com/blog/<slug>)
+  // Asynchronously fetch blog by slug or ID for public reader & editor
   // Guaranteed SUB-SECOND fetch:
-  // Tier 1: Local / Built-in cache (0ms instant return + background cloud revalidation)
-  // Tier 2: Static Edge CDN /blog/data/blogs.json (~30-80ms)
+  // Tier 1: Local / Built-in cache (0ms instant return + background cloud revalidation if content exists)
+  // Tier 2: Static Edge CDN /blog/data/blogs.json (~30-80ms if content exists)
   // Tier 3: Live Apps Script with 6.5s hard timeout
   async function fetchBlogBySlug(slug, options = {}) {
     if (!slug) return null;
@@ -529,9 +567,10 @@ const CredBabaBlogStore = (function () {
     const skipLocal = Boolean(options.skipLocal);
 
     // TIER 1: Instant Synchronous Cache Check (0ms latency!)
+    // Only return Tier 1 if the cached blog actually contains article content
     if (!skipLocal) {
       const localMatch = getBlogBySlug(cleanSlug);
-      if (localMatch) {
+      if (localMatch && localMatch.content && localMatch.content.trim()) {
         const matchStatus = (localMatch.status || '').toLowerCase();
         if (matchStatus === 'published' || includeDraft) {
           // Trigger non-blocking cloud revalidation in the background so local copy stays fresh
@@ -556,14 +595,14 @@ const CredBabaBlogStore = (function () {
         const cdnBlogs = await cdnRes.json();
         if (Array.isArray(cdnBlogs)) {
           const cdnMatch = cdnBlogs.find(b => (b.slug || '').toLowerCase() === cleanSlug || (b.id || '') === cleanSlug);
-          if (cdnMatch) {
+          if (cdnMatch && cdnMatch.content && cdnMatch.content.trim()) {
             const status = (cdnMatch.status || '').toLowerCase();
             if (status === 'published' || includeDraft) {
               // Cache locally for next time
               try {
                 const custom = getCustomBlogs();
                 const idx = custom.findIndex(b => (b.slug || '').toLowerCase() === cleanSlug || b.id === cdnMatch.id);
-                if (idx >= 0) custom[idx] = cdnMatch;
+                if (idx >= 0) custom[idx] = { ...custom[idx], ...cdnMatch };
                 else custom.unshift(cdnMatch);
                 saveCustomBlogs(custom);
               } catch (err) {}
@@ -580,7 +619,7 @@ const CredBabaBlogStore = (function () {
       try {
         const previewQuery = includeDraft ? '&preview=1' : '';
         const res = await fetchWithTimeout(
-          settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now(),
+          settings.appsScriptUrl + '?action=getBlog&slug=' + encodeURIComponent(cleanSlug) + '&id=' + encodeURIComponent(cleanSlug) + previewQuery + '&_t=' + Date.now(),
           {},
           6500
         );
@@ -589,19 +628,23 @@ const CredBabaBlogStore = (function () {
           if (data && data.result === 'success' && data.blog) {
             const status = (data.blog.status || '').toLowerCase();
             if (status === 'published' || includeDraft) {
-              // Cache locally for next time
+              // Cache locally for next time with full content preserved
               try {
                 const custom = getCustomBlogs();
-                const idx = custom.findIndex(b => (b.slug || '').toLowerCase() === cleanSlug || b.id === data.blog.id);
-                if (idx >= 0) custom[idx] = data.blog;
-                else custom.unshift(data.blog);
+                const targetSlug = (data.blog.slug || cleanSlug).toLowerCase();
+                const idx = custom.findIndex(b => (b.slug || '').toLowerCase() === targetSlug || b.id === data.blog.id || (b.slug || '').toLowerCase() === cleanSlug);
+                if (idx >= 0) {
+                  custom[idx] = { ...custom[idx], ...data.blog };
+                } else {
+                  custom.unshift(data.blog);
+                }
                 saveCustomBlogs(custom);
               } catch (err) {}
               return data.blog;
             }
             return null;
           }
-          if (data && data.result === 'not_found') {
+          if (data && data.result === 'not_found' && !includeDraft) {
             purgeLocalBlog(cleanSlug);
             return null;
           }
@@ -630,8 +673,9 @@ const CredBabaBlogStore = (function () {
         if (res.ok) {
           const data = await res.json();
           if (data && data.result === 'success' && Array.isArray(data.blogs)) {
-            saveCustomBlogs(data.blogs);
-            return mergeWithBuiltins(data.blogs);
+            const merged = mergeCustomLists(data.blogs, getCustomBlogs());
+            saveCustomBlogs(merged);
+            return mergeWithBuiltins(merged);
           }
         }
       } catch (e) {

@@ -259,7 +259,7 @@
 
     // 1. FAST PATH: Check synchronous local cache & builtins FIRST (0ms latency!)
     const cachedBlog = typeof CredBabaBlogStore !== 'undefined' ? CredBabaBlogStore.getBlogBySlug(slug) : null;
-    if (cachedBlog && ((cachedBlog.status || '').toLowerCase() === 'published' || isPreview)) {
+    if (cachedBlog && cachedBlog.content && cachedBlog.content.trim() && ((cachedBlog.status || '').toLowerCase() === 'published' || isPreview)) {
       renderBlog(cachedBlog);
       // Non-blocking background revalidation
       CredBabaBlogStore.fetchBlogBySlug(slug, { includeDraft: isPreview, skipLocal: true }).then(freshBlog => {
