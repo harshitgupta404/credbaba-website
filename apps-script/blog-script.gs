@@ -261,7 +261,7 @@ function handleRequest(e, method) {
       return jsonResponse({ result: 'success', blogs: blogs, total: blogs.length });
     }
 
-    // ACTION: getBlog (Used by public reader credbaba.com/blog/post.html?slug=...)
+    // ACTION: getBlog (Used by public reader credbaba.com/blog/<slug>)
     if (action === 'getBlog') {
       const slug = (params.slug || payload.slug || '').toString().toLowerCase().trim();
       const id = (params.id || payload.id || '').toString().trim();

@@ -28,7 +28,7 @@ const CredBabaBlogStore = (function () {
       excerpt: 'Compare interest rates, tenure, and features from SBI, HDFC, ICICI, Axis, Kotak, PNB, and LIC Housing Finance. Everything you need to choose the right home loan in 2026.',
       heroImage: '',
       status: 'published',
-      url: 'best-home-loan-options-india-interest-rates-tenure.html'
+      url: 'best-home-loan-options-india-interest-rates-tenure'
     },
     {
       id: 'builtin-2',
@@ -42,7 +42,7 @@ const CredBabaBlogStore = (function () {
       excerpt: 'A step-by-step guide to applying for a Personal, Business, or Home Loan online in India. Covers eligibility, documents, tips for quick approval, and what to check before you sign.',
       heroImage: '',
       status: 'published',
-      url: 'how-to-apply-for-loan-online-india.html'
+      url: 'how-to-apply-for-loan-online-india'
     },
     {
       id: 'builtin-3',
@@ -56,7 +56,7 @@ const CredBabaBlogStore = (function () {
       excerpt: 'Compare interest rates, tenure, processing speed and credit score impact to decide between a personal loan and a credit card loan. Includes a simple decision guide and FAQs.',
       heroImage: '',
       status: 'published',
-      url: 'personal-loan-vs-credit-card.html'
+      url: 'personal-loan-vs-credit-card'
     }
   ];
 
@@ -65,7 +65,15 @@ const CredBabaBlogStore = (function () {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_BLOGS);
       if (raw) {
-        return JSON.parse(raw);
+        const blogs = JSON.parse(raw);
+        if (Array.isArray(blogs)) {
+          return blogs.map(b => {
+            if (!b.url || b.url.startsWith('post.html')) {
+              b.url = b.slug;
+            }
+            return b;
+          });
+        }
       }
     } catch (e) {
       console.error('Failed to read custom blogs:', e);
@@ -278,7 +286,7 @@ const CredBabaBlogStore = (function () {
       content: blogData.content || '',
       faqs: Array.isArray(blogData.faqs) ? blogData.faqs : [],
       status: blogStatus, // 'published' or 'draft'
-      url: `post.html?slug=${slug}`
+      url: slug
     };
 
     if (existingIndex >= 0) {
@@ -401,7 +409,7 @@ const CredBabaBlogStore = (function () {
     return mergeWithBuiltins(local);
   }
 
-  // Asynchronously fetch blog by slug for public reader (credbaba.com/blog/post.html?slug=...)
+  // Asynchronously fetch blog by slug for public reader (credbaba.com/blog/<slug>)
   // Strictly blocks drafts from public view unless { includeDraft: true } is explicitly passed
   async function fetchBlogBySlug(slug, options = {}) {
     if (!slug) return null;
@@ -532,6 +540,35 @@ const CredBabaBlogStore = (function () {
     if (!putJsonRes.ok) {
       const err = await putJsonRes.json();
       throw new Error(err.message || 'Failed to update blogs.json on GitHub');
+    }
+
+    // Also commit the static HTML file blog/${blog.slug}.html for 100% SEO indexing and clean URL
+    try {
+      const htmlContent = generateStaticHtml(blog);
+      const htmlBase64 = btoa(unescape(encodeURIComponent(htmlContent)));
+      let htmlSha = null;
+      try {
+        const getHtmlRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/blog/${blog.slug}.html?ref=${branch}`, {
+          headers: apiHeaders
+        });
+        if (getHtmlRes.ok) {
+          const htmlData = await getHtmlRes.json();
+          htmlSha = htmlData.sha;
+        }
+      } catch (e) {}
+
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/blog/${blog.slug}.html`, {
+        method: 'PUT',
+        headers: apiHeaders,
+        body: JSON.stringify({
+          message: `feat(blog): publish static page for "${blog.title}"`,
+          content: htmlBase64,
+          sha: htmlSha || undefined,
+          branch: branch
+        })
+      });
+    } catch (htmlErr) {
+      console.warn('Could not write static HTML file to GitHub:', htmlErr);
     }
 
     return {

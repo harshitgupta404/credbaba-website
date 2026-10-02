@@ -81,32 +81,32 @@
 
     <div class="blog-card">
       <span class="blog-card-tag">Home Loans</span>
-      <h2>Best Home Loan Options in India 2026: Compare Rates, Tenure &amp; Benefits</h2>
+      <h2><a href="/blog/best-home-loan-options-india-interest-rates-tenure" style="color: inherit; text-decoration: none;">Best Home Loan Options in India 2026: Compare Rates, Tenure &amp; Benefits</a></h2>
       <p>Compare interest rates, tenure, and features from SBI, HDFC, ICICI, Axis, Kotak, PNB, and LIC Housing Finance. Everything you need to choose the right home loan in 2026.</p>
       <div class="blog-card-footer">
         <span class="blog-card-meta">August 2026 &nbsp;·&nbsp; 8 min read</span>
-        <a href="best-home-loan-options-india-interest-rates-tenure.html" class="blog-read-link">Read →</a>
+        <a href="/blog/best-home-loan-options-india-interest-rates-tenure" class="blog-read-link">Read →</a>
       </div>
     </div>
 
     <div class="blog-card">
       <span class="blog-card-tag">Loan Guide</span>
-      <h2>How to Apply for a Loan Online in India (2026): A Complete Guide</h2>
+      <h2><a href="/blog/how-to-apply-for-loan-online-india" style="color: inherit; text-decoration: none;">How to Apply for a Loan Online in India (2026): A Complete Guide</a></h2>
       <p>A step-by-step guide to applying for a Personal, Business, or Home Loan online in India. Covers eligibility, documents, tips for quick approval, and what to check before you sign.</p>
       <div class="blog-card-footer">
         <span class="blog-card-meta">August 2026 &nbsp;·&nbsp; 7 min read</span>
-        <a href="how-to-apply-for-loan-online-india.html" class="blog-read-link">Read →</a>
+        <a href="/blog/how-to-apply-for-loan-online-india" class="blog-read-link">Read →</a>
       </div>
     </div>
 
 
     <div class="blog-card">
       <span class="blog-card-tag">Personal Loans</span>
-      <h2>Personal Loan vs Credit Card Loan: Which Is Better in 2026?</h2>
+      <h2><a href="/blog/personal-loan-vs-credit-card" style="color: inherit; text-decoration: none;">Personal Loan vs Credit Card Loan: Which Is Better in 2026?</a></h2>
       <p>Compare interest rates, tenure, processing speed and credit score impact to decide between a personal loan and a credit card loan. Includes a simple decision guide and FAQs.</p>
       <div class="blog-card-footer">
         <span class="blog-card-meta">August 2026 &nbsp;·&nbsp; 9 min read</span>
-        <a href="personal-loan-vs-credit-card.html" class="blog-read-link">Read &#x2192;</a>
+        <a href="/blog/personal-loan-vs-credit-card" class="blog-read-link">Read &#x2192;</a>
       </div>
     </div>
 
@@ -152,8 +152,11 @@
       if (blog.isBuiltin) return;
       if (blog.status !== 'published') return;
 
-      var targetUrl = blog.url || ('post.html?slug=' + encodeURIComponent(blog.slug));
-      if (existingHrefs.has(targetUrl) || existingHrefs.has(blog.slug + '.html') || existingHrefs.has(blog.slug)) {
+      var slug = blog.slug || '';
+      var cleanSlug = (blog.url && !blog.url.startsWith('post.html')) ? blog.url.replace(/\.html$/, '') : slug;
+      cleanSlug = cleanSlug.replace(/^\/blog\//, '');
+      var targetUrl = '/blog/' + cleanSlug;
+      if (existingHrefs.has(targetUrl) || existingHrefs.has(cleanSlug) || existingHrefs.has('/blog/' + cleanSlug) || existingHrefs.has(cleanSlug + '.html')) {
         return;
       }
 
@@ -165,7 +168,7 @@
       card.className = 'blog-card dynamic-blog-card';
       card.innerHTML =
         '<span class="blog-card-tag">' + CredBabaBlogStore.escapeHtml(blog.category || 'Loan Guide') + '</span>' +
-        '<h2>' + CredBabaBlogStore.escapeHtml(blog.title) + '</h2>' +
+        '<h2><a href="' + targetUrl + '" style="color: inherit; text-decoration: none;">' + CredBabaBlogStore.escapeHtml(blog.title) + '</a></h2>' +
         '<p>' + CredBabaBlogStore.escapeHtml(blog.excerpt || '') + '</p>' +
         '<div class="blog-card-footer">' +
           '<span class="blog-card-meta">' + CredBabaBlogStore.escapeHtml(formattedDate) + ' &nbsp;·&nbsp; ' + CredBabaBlogStore.escapeHtml(blog.readTime || '5 min read') + '</span>' +

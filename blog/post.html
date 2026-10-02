@@ -3,6 +3,19 @@
 <head>
 <script>
   (function(){
+    var urlParams = new URLSearchParams(window.location.search);
+    var slug = urlParams.get('slug');
+    if (slug) {
+      slug = slug.replace(/\.html$/i, '');
+      var isPreview = urlParams.get('preview') === '1';
+      window.location.replace('/blog/' + encodeURIComponent(slug) + (isPreview ? '?preview=1' : ''));
+      return;
+    } else {
+      window.location.replace('/blog/');
+      return;
+    }
+  })();
+  (function(){
     var t = localStorage.getItem('credbaba-theme');
     if (!t) t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', t);
