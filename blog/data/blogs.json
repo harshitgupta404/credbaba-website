@@ -40,5 +40,20 @@
     "heroImage": "",
     "status": "published",
     "url": "personal-loan-vs-credit-card"
+  },
+  {
+    "id": "blog_1790675595585_tn0csz",
+    "isBuiltin": true,
+    "slug": "home-loan-online-simple-documents",
+    "title": "How to Apply for a Home Loan Online with Simple Documentation: A Complete Guide",
+    "category": "Home Loans",
+    "author": "CredBaba Editorial Team",
+    "publishedAt": "2026-09-29",
+    "readTime": "9 min read",
+    "excerpt": "Home loan online made simple: check eligibility, keep KYC and income documents ready, follow the home loan apply steps and avoid common application mistakes.",
+    "metaDescription": "Home loan online made simple: check eligibility, keep KYC and income documents ready, follow the home loan apply steps and avoid common application mistakes.",
+    "heroImage": "/assets/images/blog/home-loan-online-simple-documents.webp",
+    "status": "published",
+    "url": "home-loan-online-simple-documents"
   }
 ]

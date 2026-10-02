@@ -157,15 +157,133 @@
       return;
     }
 
-    // Show loading state while retrieving
+    function renderBlog(blog) {
+      if (!blog) return;
+
+      // Update document head metadata
+      document.title = `${blog.title} | CredBaba`;
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute('content', blog.metaDescription || blog.excerpt || blog.title);
+
+      const formattedDate = new Date(blog.publishedAt || Date.now()).toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric'
+      });
+
+      const isDraft = (blog.status || '').toLowerCase() === 'draft';
+      const previewBanner = isDraft ? `
+        <div style="background: rgba(201, 162, 39, 0.08); border: 1px dashed var(--color-gold); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-5); font-size: var(--text-xs); color: var(--color-ink); display: flex; align-items: center; justify-content: space-between;">
+          <span><strong>Preview Mode:</strong> This article is saved as a <strong>Draft</strong> and is not visible on the public website.</span>
+          <span style="font-weight: 600; text-transform: uppercase; font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--color-gold); color: #fff;">Draft</span>
+        </div>
+      ` : '';
+
+      const heroImageHtml = blog.heroImage ? `
+        <div class="blog-hero-image-wrap">
+          <img src="${blog.heroImage}" alt="${CredBabaBlogStore.escapeHtml(blog.title)}" />
+        </div>
+      ` : '';
+
+      // Avoid duplicating the title if excerpt is identical or empty
+      const isDuplicateExcerpt = (blog.excerpt || '').trim().toLowerCase() === (blog.title || '').trim().toLowerCase();
+      const introHtml = (blog.excerpt && !isDuplicateExcerpt)
+        ? `<div class="blog-intro">${CredBabaBlogStore.escapeHtml(blog.excerpt)}</div>`
+        : '';
+
+      // Strip leading empty paragraphs, whitespace, or br tags from blog.content
+      const cleanContent = (blog.content || '')
+        .replace(/^(\s*<p[^>]*>(\s*<br\s*\/?>|\s*&nbsp;|\s*)*<\/p>\s*|\s*<br\s*\/?>\s*)+/i, '');
+
+      const faqItemsHtml = (blog.faqs || []).map(faq => `
+        <div class="faq-item">
+          <button class="faq-question" aria-expanded="false">
+            ${CredBabaBlogStore.escapeHtml(faq.q)}
+            <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <div class="faq-answer">${faq.a}</div>
+        </div>
+      `).join('\n');
+
+      mainEl.innerHTML = `
+        <div class="blog-post-header">
+          ${previewBanner}
+          <div class="breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Blog</a> / ${CredBabaBlogStore.escapeHtml(blog.title)}</div>
+          <div class="eyebrow">${CredBabaBlogStore.escapeHtml((blog.category || 'LOAN GUIDE').toUpperCase())} · ${formattedDate.toUpperCase()}</div>
+          <h1>${CredBabaBlogStore.escapeHtml(blog.title)}</h1>
+          <div class="blog-meta">By ${CredBabaBlogStore.escapeHtml(blog.author || 'CredBaba Editorial Team')} &nbsp;·&nbsp; ${blog.readTime || '5 min read'}</div>
+        </div>
+
+        ${heroImageHtml}
+
+        <div class="blog-content">
+          ${introHtml}
+          
+          <div>${cleanContent}</div>
+
+          ${faqItemsHtml ? `<h2 style="margin-top: var(--space-8); margin-bottom: var(--space-4);">Frequently Asked Questions</h2>\n${faqItemsHtml}` : ''}
+
+          <div class="blog-cta">
+            <h2>Explore Low Interest Loan Options with CredBaba</h2>
+            <p>Submit your loan inquiry online in 2 minutes. Transparent options, fast approvals, zero spam.</p>
+            <a href="../business-loan/" class="btn">Apply Online Today →</a>
+          </div>
+
+          <p class="blog-disclaimer">The information in this article is for general educational purposes only and does not constitute financial or legal advice. Interest rates, fees and loan terms vary by lender and applicant profile. CredBaba is a digital loan facilitation service (DSA) and does not directly lend money.</p>
+        </div>
+      `;
+
+      // Interactive FAQs
+      document.querySelectorAll('.faq-question').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var item = this.closest('.faq-item');
+          var isOpen = item.classList.toggle('open');
+          this.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+      });
+
+      // Check if backoffice user is logged in to show quick edit
+      if (typeof CredBabaBackofficeAuth !== 'undefined') {
+        const session = CredBabaBackofficeAuth.getSession();
+        if (session) {
+          const quickBar = document.getElementById('adminQuickBar');
+          const editLink = document.getElementById('adminEditLink');
+          const downloadBtn = document.getElementById('adminDownloadBtn');
+          quickBar.style.display = 'flex';
+          editLink.href = `../backoffice/editor.html?id=${blog.id || blog.slug}`;
+          downloadBtn.addEventListener('click', () => CredBabaBlogStore.downloadBlogHtml(blog));
+        }
+      }
+    }
+
+    const isPreview = urlParams.get('preview') === '1';
+
+    // 1. FAST PATH: Check synchronous local cache & builtins FIRST (0ms latency!)
+    const cachedBlog = typeof CredBabaBlogStore !== 'undefined' ? CredBabaBlogStore.getBlogBySlug(slug) : null;
+    if (cachedBlog && ((cachedBlog.status || '').toLowerCase() === 'published' || isPreview)) {
+      renderBlog(cachedBlog);
+      // Non-blocking background revalidation
+      CredBabaBlogStore.fetchBlogBySlug(slug, { includeDraft: isPreview, skipLocal: true }).then(freshBlog => {
+        if (freshBlog && freshBlog.updatedAt !== cachedBlog.updatedAt) {
+          renderBlog(freshBlog);
+        }
+      }).catch(() => {});
+      return;
+    }
+
+    // 2. Uncached: Show high-end skeleton placeholder (0 layout shift) while retrieving (< 1s)
     mainEl.innerHTML = `
-      <div style="padding: var(--space-10) 0; text-align: center; max-width: 600px; margin: 0 auto;">
-        <h2 style="font-size: var(--text-2xl); color: var(--color-ink); margin-bottom: var(--space-3);">Loading article...</h2>
-        <p style="color: var(--color-ink-soft);">Retrieving the latest version from CredBaba.</p>
+      <div style="max-width: 800px; padding: var(--space-8) 0; margin: 0 auto;">
+        <div style="height: 14px; width: 28%; background: var(--color-border); border-radius: 4px; margin-bottom: var(--space-4); opacity: 0.6;"></div>
+        <div style="height: 40px; width: 88%; background: var(--color-border); border-radius: 6px; margin-bottom: var(--space-4); opacity: 0.7;"></div>
+        <div style="height: 16px; width: 42%; background: var(--color-border); border-radius: 4px; margin-bottom: var(--space-7); opacity: 0.5;"></div>
+        <div style="height: 240px; width: 100%; background: var(--color-border); border-radius: 12px; margin-bottom: var(--space-7); opacity: 0.4;"></div>
+        <div style="height: 16px; width: 100%; background: var(--color-border); border-radius: 4px; margin-bottom: var(--space-3); opacity: 0.5;"></div>
+        <div style="height: 16px; width: 94%; background: var(--color-border); border-radius: 4px; margin-bottom: var(--space-3); opacity: 0.5;"></div>
+        <div style="height: 16px; width: 82%; background: var(--color-border); border-radius: 4px; margin-bottom: var(--space-3); opacity: 0.5;"></div>
       </div>
     `;
 
-    const isPreview = urlParams.get('preview') === '1';
+    // 3. Fast multi-tiered fetch (Static Edge CDN -> Cloud Apps Script with 2.5s hard timeout)
     const blog = await CredBabaBlogStore.fetchBlogBySlug(slug, { includeDraft: isPreview });
 
     if (!blog) {
@@ -179,97 +297,7 @@
       return;
     }
 
-    // Update document head metadata
-    document.title = `${blog.title} | CredBaba`;
-    let metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', blog.metaDescription || blog.excerpt || blog.title);
-
-    const formattedDate = new Date(blog.publishedAt || Date.now()).toLocaleDateString('en-US', {
-      month: 'long',
-      year: 'numeric'
-    });
-
-    const isDraft = (blog.status || '').toLowerCase() === 'draft';
-    const previewBanner = isDraft ? `
-      <div style="background: rgba(201, 162, 39, 0.08); border: 1px dashed var(--color-gold); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); margin-bottom: var(--space-5); font-size: var(--text-xs); color: var(--color-ink); display: flex; align-items: center; justify-content: space-between;">
-        <span><strong>Preview Mode:</strong> This article is saved as a <strong>Draft</strong> and is not visible on the public website.</span>
-        <span style="font-weight: 600; text-transform: uppercase; font-size: 10px; padding: 2px 8px; border-radius: 4px; background: var(--color-gold); color: #fff;">Draft</span>
-      </div>
-    ` : '';
-
-    const heroImageHtml = blog.heroImage ? `
-      <div class="blog-hero-image-wrap">
-        <img src="${blog.heroImage}" alt="${CredBabaBlogStore.escapeHtml(blog.title)}" />
-      </div>
-    ` : '';
-
-    // Avoid duplicating the title if excerpt is identical or empty
-    const isDuplicateExcerpt = (blog.excerpt || '').trim().toLowerCase() === (blog.title || '').trim().toLowerCase();
-    const introHtml = (blog.excerpt && !isDuplicateExcerpt)
-      ? `<div class="blog-intro">${CredBabaBlogStore.escapeHtml(blog.excerpt)}</div>`
-      : '';
-
-    // Strip leading empty paragraphs, whitespace, or br tags from blog.content
-    const cleanContent = (blog.content || '')
-      .replace(/^(\s*<p[^>]*>(\s*<br\s*\/?>|\s*&nbsp;|\s*)*<\/p>\s*|\s*<br\s*\/?>\s*)+/i, '');
-
-    const faqItemsHtml = (blog.faqs || []).map(faq => `
-      <div class="faq-item">
-        <button class="faq-question" aria-expanded="false">
-          ${CredBabaBlogStore.escapeHtml(faq.q)}
-          <svg class="faq-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
-        <div class="faq-answer">${faq.a}</div>
-      </div>
-    `).join('\n');
-
-    mainEl.innerHTML = `
-      <div class="blog-post-header">
-        ${previewBanner}
-        <div class="breadcrumb"><a href="../index.html">Home</a> / <a href="index.html">Blog</a> / ${CredBabaBlogStore.escapeHtml(blog.title)}</div>
-        <div class="eyebrow">${CredBabaBlogStore.escapeHtml((blog.category || 'LOAN GUIDE').toUpperCase())} · ${formattedDate.toUpperCase()}</div>
-        <h1>${CredBabaBlogStore.escapeHtml(blog.title)}</h1>
-        <div class="blog-meta">By ${CredBabaBlogStore.escapeHtml(blog.author || 'CredBaba Editorial Team')} &nbsp;·&nbsp; ${blog.readTime || '5 min read'}</div>
-      </div>
-
-      ${heroImageHtml}
-
-      <div class="blog-content">
-        ${introHtml}
-        
-        <div>${cleanContent}</div>
-
-        ${faqItemsHtml ? `<h2 style="margin-top: var(--space-8); margin-bottom: var(--space-4);">Frequently Asked Questions</h2>\n${faqItemsHtml}` : ''}
-
-        <div class="blog-cta">
-          <h2>Explore Low Interest Loan Options with CredBaba</h2>
-          <p>Submit your loan inquiry online in 2 minutes. Transparent options, fast approvals, zero spam.</p>
-          <a href="../business-loan/" class="btn">Apply Online Today →</a>
-        </div>
-
-        <p class="blog-disclaimer">The information in this article is for general educational purposes only and does not constitute financial or legal advice. Interest rates, fees and loan terms vary by lender and applicant profile. CredBaba is a digital loan facilitation service (DSA) and does not directly lend money.</p>
-      </div>
-    `;
-
-    // Interactive FAQs
-    document.querySelectorAll('.faq-question').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var item = this.closest('.faq-item');
-        var isOpen = item.classList.toggle('open');
-        this.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-      });
-    });
-
-    // Check if backoffice user is logged in to show quick edit
-    const session = CredBabaBackofficeAuth.getSession();
-    if (session) {
-      const quickBar = document.getElementById('adminQuickBar');
-      const editLink = document.getElementById('adminEditLink');
-      const downloadBtn = document.getElementById('adminDownloadBtn');
-      quickBar.style.display = 'flex';
-      editLink.href = `../backoffice/editor.html?id=${blog.id || blog.slug}`;
-      downloadBtn.addEventListener('click', () => CredBabaBlogStore.downloadBlogHtml(blog));
-    }
+    renderBlog(blog);
   })();
 
   // Mobile menu toggle

@@ -47,22 +47,22 @@ function handleRequest(e, method) {
     }
 
     const action = payload.action || params.action || 'ping';
-    const ss = getSpreadsheet();
-    if (!ss) {
-      return jsonResponse({
-        result: 'error',
-        message: 'Script is not attached to a spreadsheet. Either open from Google Sheets -> Extensions -> Apps Script, or set SPREADSHEET_ID in blog-script.gs.'
-      });
-    }
 
-    // ACTION: ping (Health check)
+    // ACTION: ping (Health check - fast return in 10ms without loading spreadsheet)
     if (action === 'ping' || action === 'status') {
       return jsonResponse({
         result: 'success',
         status: 'online',
         service: 'CredBaba Blog & User Cloud API',
-        spreadsheet: ss.getName(),
         timestamp: new Date().toISOString()
+      });
+    }
+
+    const ss = getSpreadsheet();
+    if (!ss) {
+      return jsonResponse({
+        result: 'error',
+        message: 'Script is not attached to a spreadsheet. Either open from Google Sheets -> Extensions -> Apps Script, or set SPREADSHEET_ID in blog-script.gs.'
       });
     }
 
@@ -254,8 +254,13 @@ function handleRequest(e, method) {
     let sheet = getBlogsSheet(ss);
 
     // ACTION: getBlogs (Used by public website credbaba.com/blog/)
-    // Returns ONLY blogs with Status === 'published'
+    // Returns ONLY blogs with Status === 'published' with RAM cache
     if (action === 'getBlogs') {
+      const cached = getFromCache('published_blogs');
+      if (cached) {
+        return jsonResponse(cached);
+      }
+
       const data = sheet.getDataRange().getValues();
       const blogs = [];
 
@@ -288,7 +293,9 @@ function handleRequest(e, method) {
         }
       }
 
-      return jsonResponse({ result: 'success', blogs: blogs, total: blogs.length });
+      const resObj = { result: 'success', blogs: blogs, total: blogs.length };
+      putInCache('published_blogs', resObj, 21600);
+      return jsonResponse(resObj);
     }
 
     // ACTION: getBlog (Used by public reader credbaba.com/blog/<slug>)
@@ -299,6 +306,14 @@ function handleRequest(e, method) {
 
       if (!slug && !id) {
         return jsonResponse({ result: 'error', message: 'Missing slug or id parameter' });
+      }
+
+      const cacheKey = 'blog_' + (slug || id);
+      if (!includeDraft) {
+        const cached = getFromCache(cacheKey);
+        if (cached) {
+          return jsonResponse(cached);
+        }
       }
 
       const data = sheet.getDataRange().getValues();
@@ -321,25 +336,29 @@ function handleRequest(e, method) {
             if (row[11]) faqs = JSON.parse(row[11]);
           } catch (err) {}
 
-          return jsonResponse({
-            result: 'success',
-            blog: {
-              id: row[0],
-              title: row[1],
-              slug: row[2],
-              category: row[3],
-              author: row[4],
-              publishedAt: formatDate(row[5]),
-              readTime: row[6],
-              excerpt: row[7],
-              metaDescription: row[8],
-              heroImage: row[9],
-              content: row[10],
-              faqs: faqs,
-              status: status,
-              updatedAt: row[13]
-            }
-          });
+          const blogData = {
+            id: row[0],
+            title: row[1],
+            slug: row[2],
+            category: row[3],
+            author: row[4],
+            publishedAt: formatDate(row[5]),
+            readTime: row[6],
+            excerpt: row[7],
+            metaDescription: row[8],
+            heroImage: row[9],
+            content: row[10],
+            faqs: faqs,
+            status: status,
+            updatedAt: row[13]
+          };
+
+          const resObj = { result: 'success', blog: blogData };
+          if (status === 'published' && !includeDraft) {
+            putInCache(cacheKey, resObj, 21600);
+          }
+
+          return jsonResponse(resObj);
         }
       }
 
@@ -427,6 +446,9 @@ function handleRequest(e, method) {
         sheet.appendRow(rowValues);
       }
 
+      // Invalidate RAM cache so fresh changes are visible immediately
+      clearCacheKeys(['published_blogs', 'blog_' + targetSlug, 'blog_' + targetId]);
+
       return jsonResponse({
         result: 'success',
         blog: b,
@@ -457,6 +479,9 @@ function handleRequest(e, method) {
           break;
         }
       }
+
+      // Invalidate RAM cache
+      clearCacheKeys(['published_blogs', 'blog_' + targetSlug, 'blog_' + targetId]);
 
       return jsonResponse({ result: 'success', deleted: deleted, target: targetSlug || targetId });
     }
@@ -549,4 +574,34 @@ function formatDate(val) {
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// In-Memory High Speed Caching Helpers (RAM CacheService)
+function getFromCache(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function putInCache(key, obj, ttlSeconds) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const str = JSON.stringify(obj);
+    if (str.length < 95000) {
+      cache.put(key, str, ttlSeconds || 21600);
+    }
+  } catch (e) {}
+}
+
+function clearCacheKeys(keys) {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (Array.isArray(keys) && keys.length > 0) {
+      cache.removeAll(keys.filter(Boolean));
+    }
+  } catch (e) {}
 }
