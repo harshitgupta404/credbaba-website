@@ -303,6 +303,9 @@ const CredBabaBlogStore = (function () {
 
     // 2. Sync to Google Apps Script (Option 1)
     const settings = getSettings();
+    let cloudSynced = false;
+    let cloudError = null;
+
     if (settings.appsScriptUrl) {
       try {
         const res = await fetch(settings.appsScriptUrl, {
@@ -312,14 +315,26 @@ const CredBabaBlogStore = (function () {
         });
         if (res.ok) {
           const respData = await res.json();
-          if (respData && respData.result === 'error') {
-            console.warn('Apps Script returned error:', respData.message);
+          if (respData && respData.result === 'success') {
+            cloudSynced = true;
+          } else {
+            cloudError = respData ? respData.message : 'Apps Script returned non-success response';
+            console.warn('Apps Script returned error:', respData);
           }
+        } else if (res.status === 403) {
+          cloudError = 'HTTP 403 Forbidden: Apps Script Web App must be deployed with "Who has access: Anyone".';
+          console.warn('Apps Script 403 Forbidden');
+        } else {
+          cloudError = `HTTP ${res.status}: Cloud server rejected the save request.`;
         }
       } catch (err) {
+        cloudError = err.message || 'Network error syncing to Google Sheets.';
         console.warn('Google Apps Script save warning:', err);
       }
     }
+
+    blogRecord._cloudSynced = cloudSynced;
+    blogRecord._cloudError = cloudError;
 
     return blogRecord;
   }
@@ -380,7 +395,21 @@ const CredBabaBlogStore = (function () {
     return saved;
   }
 
-  // Asynchronously fetch published blogs for public website (credba.com/blog/)
+  // Helper to merge lists of custom blogs without duplicate slugs
+  function mergeCustomLists(primary, secondary) {
+    const map = new Map();
+    (secondary || []).forEach(b => {
+      const key = (b.slug || b.id || '').toLowerCase();
+      if (key) map.set(key, b);
+    });
+    (primary || []).forEach(b => {
+      const key = (b.slug || b.id || '').toLowerCase();
+      if (key) map.set(key, b);
+    });
+    return Array.from(map.values());
+  }
+
+  // Asynchronously fetch published blogs for public website (credbaba.com/blog/)
   // Ensures drafts and deleted articles are NEVER shown
   async function fetchPublishedBlogs() {
     const settings = getSettings();
@@ -400,11 +429,28 @@ const CredBabaBlogStore = (function () {
           }
         }
       } catch (e) {
-        console.warn('Apps Script fetchPublishedBlogs failed, falling back to local cache:', e);
+        console.warn('Apps Script fetchPublishedBlogs failed, checking static fallback:', e);
       }
     }
 
-    // 2. Fallback: filter local custom blogs STRICTLY for published
+    // 2. Fallback to static CDN / blogs.json
+    try {
+      const cdnUrl = (typeof window !== 'undefined' && window.location.origin.includes('credbaba.com'))
+        ? '/blog/data/blogs.json?_t=' + Date.now()
+        : 'https://credbaba.com/blog/data/blogs.json?_t=' + Date.now();
+      const cdnRes = await fetch(cdnUrl);
+      if (cdnRes.ok) {
+        const cdnBlogs = await cdnRes.json();
+        if (Array.isArray(cdnBlogs) && cdnBlogs.length > 0) {
+          const publishedCdn = cdnBlogs.filter(b => (b.status || '').toLowerCase() === 'published');
+          const local = getCustomBlogs().filter(b => (b.status || '').toLowerCase() === 'published');
+          const combined = mergeCustomLists(local, publishedCdn);
+          return mergeWithBuiltins(combined);
+        }
+      }
+    } catch (e) {}
+
+    // 3. Fallback: filter local custom blogs STRICTLY for published
     const local = getCustomBlogs().filter(b => (b.status || '').toLowerCase() === 'published');
     return mergeWithBuiltins(local);
   }
@@ -476,10 +522,145 @@ const CredBabaBlogStore = (function () {
           }
         }
       } catch (e) {
-        console.warn('Apps Script fetchAllBlogs failed:', e);
+        console.warn('Apps Script fetchAllBlogs failed, checking static fallback:', e);
       }
     }
+
+    // Static fallback: check /blog/data/blogs.json
+    try {
+      const cdnUrl = (typeof window !== 'undefined' && window.location.origin.includes('credbaba.com'))
+        ? '/blog/data/blogs.json?_t=' + Date.now()
+        : 'https://credbaba.com/blog/data/blogs.json?_t=' + Date.now();
+      const cdnRes = await fetch(cdnUrl);
+      if (cdnRes.ok) {
+        const cdnBlogs = await cdnRes.json();
+        if (Array.isArray(cdnBlogs) && cdnBlogs.length > 0) {
+          const current = getCustomBlogs();
+          const merged = mergeCustomLists(current, cdnBlogs);
+          saveCustomBlogs(merged);
+          return mergeWithBuiltins(merged);
+        }
+      }
+    } catch (e) {}
+
     return getAllBlogs();
+  }
+
+  // Live Cloud Diagnostics Tool
+  async function testCloudConnection(customUrl) {
+    const url = (customUrl || getSettings().appsScriptUrl || '').trim();
+    if (!url) {
+      return {
+        ok: false,
+        status: 0,
+        code: 'NO_URL',
+        message: 'No Google Apps Script Web App URL configured in Settings.'
+      };
+    }
+
+    try {
+      const pingUrl = url + (url.includes('?') ? '&' : '?') + 'action=ping&_t=' + Date.now();
+      const res = await fetch(pingUrl);
+
+      if (res.status === 403) {
+        return {
+          ok: false,
+          status: 403,
+          code: 'FORBIDDEN_403',
+          message: 'HTTP 403 Forbidden: Google Apps Script Web App access is restricted.',
+          instructions: 'In Google Sheets, go to Extensions -> Apps Script -> Deploy -> Manage deployments -> Edit active deployment -> Change "Who has access" to "Anyone" -> Deploy.'
+        };
+      }
+
+      if (!res.ok) {
+        return {
+          ok: false,
+          status: res.status,
+          code: 'HTTP_ERROR',
+          message: `Server returned HTTP ${res.status}: ${res.statusText}.`
+        };
+      }
+
+      const data = await res.json();
+      if (data && data.result === 'success') {
+        return {
+          ok: true,
+          status: 200,
+          code: 'SUCCESS',
+          message: `Connected successfully to Google Sheet "${data.spreadsheet || 'CredBaba Blogs'}"!`,
+          data: data
+        };
+      }
+
+      return {
+        ok: false,
+        status: 200,
+        code: 'APP_ERROR',
+        message: data.message || 'Script responded with an error.'
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        status: 0,
+        code: 'NETWORK_ERROR',
+        message: 'Network or CORS error connecting to Apps Script. (If the Web App is not set to "Anyone", browsers block cross-origin requests): ' + err.message
+      };
+    }
+  }
+
+  // Export all articles (builtins + custom) as portable JSON file
+  function exportAllBlogsJson() {
+    const blogs = getAllBlogs();
+    const blob = new Blob([JSON.stringify(blogs, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `credbaba-blogs-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return blogs;
+  }
+
+  // Import articles array from JSON file and save locally + sync to cloud
+  async function importBlogsJson(jsonContent) {
+    let list;
+    if (typeof jsonContent === 'string') {
+      try {
+        list = JSON.parse(jsonContent);
+      } catch (e) {
+        throw new Error('Invalid JSON format: ' + e.message);
+      }
+    } else if (Array.isArray(jsonContent)) {
+      list = jsonContent;
+    } else {
+      throw new Error('Import data must be a JSON array of blogs.');
+    }
+
+    if (!Array.isArray(list)) {
+      throw new Error('Import data must be a JSON array of blog articles.');
+    }
+
+    let successCount = 0;
+    const errors = [];
+
+    for (const b of list) {
+      if (!b || !b.title) continue;
+      try {
+        await saveBlog(b);
+        successCount++;
+      } catch (err) {
+        errors.push(`Error saving "${b.title}": ${err.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      importedCount: successCount,
+      totalCount: list.length,
+      errors: errors
+    };
   }
 
   // Legacy / optional GitHub publisher (kept for backup or manual repository commit)
@@ -647,9 +828,16 @@ const CredBabaBlogStore = (function () {
     </div>`).join('\n');
 
     const heroImageHtml = blog.heroImage ? `
-    <div class="blog-hero-image-wrap" style="margin: var(--space-6) 0 var(--space-7); border-radius: var(--radius-lg); overflow: hidden; max-height: 480px; border: 1px solid var(--color-border);">
+    <div class="blog-hero-image-wrap" style="margin: var(--space-4) 0 var(--space-4); border-radius: var(--radius-lg); overflow: hidden; max-height: 480px; border: 1px solid var(--color-border);">
       <img src="${blog.heroImage}" alt="${escapeHtml(blog.title)}" style="width: 100%; height: auto; object-fit: cover; display: block;" />
     </div>` : '';
+
+    const isDuplicateExcerpt = (blog.excerpt || '').trim().toLowerCase() === (blog.title || '').trim().toLowerCase();
+    const introHtml = (blog.excerpt && !isDuplicateExcerpt)
+      ? `<div class="blog-intro" style="margin: var(--space-2) 0 var(--space-5);">${escapeHtml(blog.excerpt)}</div>`
+      : '';
+    const cleanContent = (blog.content || '')
+      .replace(/^(\s*<p[^>]*>(\s*<br\s*\/?>|\s*&nbsp;|\s*)*<\/p>\s*|\s*<br\s*\/?>\s*)+/i, '');
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -697,8 +885,8 @@ const CredBabaBlogStore = (function () {
   </div>
   ${heroImageHtml}
   <div class="blog-content">
-    ${blog.excerpt ? `<div class="blog-intro">${escapeHtml(blog.excerpt)}</div>` : ''}
-    ${blog.content}
+    ${introHtml}
+    ${cleanContent}
     ${faqItemsHtml ? `<h2>Frequently Asked Questions</h2>\n${faqItemsHtml}` : ''}
     <div class="blog-cta">
       <h2>Explore Low Interest Loan Options with CredBaba</h2>
@@ -764,6 +952,9 @@ const CredBabaBlogStore = (function () {
     slugify,
     getSettings,
     saveSettings,
+    testCloudConnection,
+    exportAllBlogsJson,
+    importBlogsJson,
     escapeHtml
   };
 })();

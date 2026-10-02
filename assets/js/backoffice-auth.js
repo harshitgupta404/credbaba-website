@@ -484,22 +484,131 @@ const CredBabaBackofficeAuth = (function () {
     window.addEventListener('load', initNav);
   }
 
+  // Helper to merge local and cloud user lists without duplicates
+  function mergeUsersLists(localList, cloudList) {
+    const map = new Map();
+    // Default admin is always primary
+    map.set('admin', DEFAULT_ADMIN);
+    (cloudList || []).forEach(u => {
+      const key = (u.username || '').toLowerCase();
+      if (key) map.set(key, u);
+    });
+    (localList || []).forEach(u => {
+      const key = (u.username || '').toLowerCase();
+      if (key && !map.has(key)) map.set(key, u);
+    });
+    return Array.from(map.values());
+  }
+
   // Fetch users live from Google Sheet Cloud Database
   async function fetchUsers() {
+    let cloudSynced = false;
+    let cloudError = null;
+
     try {
       const url = getAppsScriptUrl();
-      const res = await fetch(url + '?action=getUsers&_t=' + Date.now());
+      const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'action=getUsers&_t=' + Date.now());
       if (res.ok) {
         const data = await res.json();
         if (data && data.result === 'success' && Array.isArray(data.users)) {
-          saveUsers(data.users);
-          return data.users;
+          const localUsers = getUsers();
+          const merged = mergeUsersLists(localUsers, data.users);
+          saveUsers(merged);
+          return { users: merged, cloudSynced: true };
         }
+      } else if (res.status === 403) {
+        cloudError = 'HTTP 403 Forbidden: Google Apps Script Web App must be deployed with "Who has access: Anyone".';
+      } else {
+        cloudError = `HTTP ${res.status}: Cloud server returned an error.`;
       }
     } catch (e) {
+      cloudError = e.message || 'Network error connecting to Apps Script.';
       console.warn('Could not fetch cloud users, falling back to local cache:', e);
     }
-    return getUsers();
+    return { users: getUsers(), cloudSynced: false, cloudError: cloudError };
+  }
+
+  // Export all users (excluding primary admin) as JSON
+  function exportUsersJson() {
+    const users = getUsers().filter(u => !u.isPrimary && u.username.toLowerCase() !== 'admin');
+    const blob = new Blob([JSON.stringify(users, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `credbaba-users-export-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return users;
+  }
+
+  // Import user list from JSON file and save locally + sync to cloud
+  async function importUsersJson(jsonContent) {
+    let list;
+    if (typeof jsonContent === 'string') {
+      try {
+        list = JSON.parse(jsonContent);
+      } catch (e) {
+        throw new Error('Invalid JSON format: ' + e.message);
+      }
+    } else if (Array.isArray(jsonContent)) {
+      list = jsonContent;
+    } else {
+      throw new Error('Import data must be a JSON array of users.');
+    }
+
+    if (!Array.isArray(list)) {
+      throw new Error('Import data must be a JSON array of users.');
+    }
+
+    const currentUsers = getUsers();
+    let count = 0;
+    const errors = [];
+
+    for (const u of list) {
+      if (!u || !u.username || u.username.toLowerCase() === 'admin') continue;
+      const uname = u.username.toLowerCase().trim();
+      const existingIdx = currentUsers.findIndex(cu => cu.username.toLowerCase() === uname);
+
+      const userRecord = {
+        username: uname,
+        name: (u.name || uname).trim(),
+        role: u.role || 'Marketing Editor',
+        passwordHash: u.passwordHash,
+        status: u.status || 'active',
+        createdAt: u.createdAt || new Date().toISOString(),
+        isPrimary: false,
+        lastUpdated: new Date().toISOString()
+      };
+
+      if (existingIdx >= 0) {
+        currentUsers[existingIdx] = userRecord;
+      } else {
+        currentUsers.push(userRecord);
+      }
+      count++;
+
+      // Attempt cloud sync to Google Sheets
+      try {
+        const scriptUrl = getAppsScriptUrl();
+        await fetch(scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'saveUser', user: userRecord })
+        });
+      } catch (err) {
+        errors.push(`Cloud sync failed for @${uname}: ${err.message}`);
+      }
+    }
+
+    saveUsers(currentUsers);
+    return {
+      success: true,
+      importedCount: count,
+      totalCount: list.length,
+      errors: errors
+    };
   }
 
   // Add new user locally AND sync to Google Sheet
@@ -540,6 +649,9 @@ const CredBabaBackofficeAuth = (function () {
     saveUsers(users);
 
     // 2. Sync to central Google Sheet
+    let cloudSynced = false;
+    let cloudError = null;
+
     try {
       const scriptUrl = getAppsScriptUrl();
       const res = await fetch(scriptUrl, {
@@ -552,19 +664,37 @@ const CredBabaBackofficeAuth = (function () {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.result === 'error') {
-          return { success: false, message: data.message };
+        if (data && data.result === 'success') {
+          cloudSynced = true;
+        } else if (data && data.result === 'error') {
+          cloudError = data.message;
         }
+      } else if (res.status === 403) {
+        cloudError = 'HTTP 403 Forbidden: Google Apps Script Web App must be deployed with "Who has access: Anyone".';
+      } else {
+        cloudError = `HTTP ${res.status}: Cloud server rejected the user save request.`;
       }
     } catch (e) {
+      cloudError = e.message || 'Network error syncing to Google Sheets.';
       console.warn('Apps Script user sync error:', e);
     }
 
-    return {
-      success: true,
-      user: newUser,
-      message: `User ${newUser.username} (${newUser.role}) created and synchronized across all devices.`
-    };
+    if (cloudSynced) {
+      return {
+        success: true,
+        cloudSynced: true,
+        user: newUser,
+        message: `User @${newUser.username} (${newUser.role}) created and synced to Google Sheets cloud.`
+      };
+    } else {
+      return {
+        success: true,
+        cloudSynced: false,
+        cloudError: cloudError,
+        user: newUser,
+        message: `User @${newUser.username} saved to this device, but Cloud Sync failed (${cloudError || 'offline'}). To access from other devices, set "Who has access: Anyone" in Apps Script or use Export/Import.`
+      };
+    }
   }
 
   // Update user role or status
@@ -713,6 +843,8 @@ const CredBabaBackofficeAuth = (function () {
     addUser,
     updateUser,
     deleteUser,
+    exportUsersJson,
+    importUsersJson,
     resetToDefaults,
     getRemainingLockoutMs,
     BACKOFFICE_HOSTNAME

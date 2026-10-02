@@ -6,8 +6,24 @@
 //   2. Multi-user backoffice authentication, roles, and synchronization
 // ==========================================================================
 
+// Set your Google Sheet ID below ONLY if deploying as a standalone script from script.google.com.
+// If created inside Google Sheets via Extensions -> Apps Script, leave this empty.
+const SPREADSHEET_ID = '';
 const SHEET_NAME_BLOGS = 'CredBaba Blogs';
 const SHEET_NAME_USERS = 'CredBaba Users';
+
+function getSpreadsheet() {
+  if (typeof SPREADSHEET_ID !== 'undefined' && SPREADSHEET_ID && SPREADSHEET_ID.trim()) {
+    try {
+      return SpreadsheetApp.openById(SPREADSHEET_ID.trim());
+    } catch (e) {}
+  }
+  try {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  } catch (e) {
+    return null;
+  }
+}
 
 function doGet(e) {
   return handleRequest(e, 'GET');
@@ -30,10 +46,24 @@ function handleRequest(e, method) {
       }
     }
 
-    const action = payload.action || params.action || 'getBlogs';
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const action = payload.action || params.action || 'ping';
+    const ss = getSpreadsheet();
     if (!ss) {
-      return jsonResponse({ result: 'error', message: 'Script is not attached to a spreadsheet. Open from Extensions -> Apps Script inside Google Sheets.' });
+      return jsonResponse({
+        result: 'error',
+        message: 'Script is not attached to a spreadsheet. Either open from Google Sheets -> Extensions -> Apps Script, or set SPREADSHEET_ID in blog-script.gs.'
+      });
+    }
+
+    // ACTION: ping (Health check)
+    if (action === 'ping' || action === 'status') {
+      return jsonResponse({
+        result: 'success',
+        status: 'online',
+        service: 'CredBaba Blog & User Cloud API',
+        spreadsheet: ss.getName(),
+        timestamp: new Date().toISOString()
+      });
     }
 
     // ========================================================================

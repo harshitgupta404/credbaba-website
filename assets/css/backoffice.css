@@ -133,6 +133,60 @@
   display: inline-block;
 }
 
+.cloud-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  text-decoration: none;
+  transition: all var(--dur-fast) ease;
+}
+.cloud-status-pill:hover {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+.cloud-status-pill .cloud-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-ink-faint);
+  display: inline-block;
+}
+.cloud-status-pill.online {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.08);
+  color: var(--color-success);
+}
+.cloud-status-pill.online .cloud-status-dot {
+  background: var(--color-success);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+.cloud-status-pill.forbidden, .cloud-status-pill.offline {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error);
+}
+.cloud-status-pill.forbidden .cloud-status-dot, .cloud-status-pill.offline .cloud-status-dot {
+  background: var(--color-error);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+.cloud-status-pill.checking {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.08);
+  color: var(--color-gold);
+}
+.cloud-status-pill.checking .cloud-status-dot {
+  background: var(--color-gold);
+}
+
 .btn-logout {
   background: transparent;
   border: 1px solid var(--color-border);
